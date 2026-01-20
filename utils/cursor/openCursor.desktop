@@ -1,0 +1,12 @@
+ [Desktop Entry]
+ Name = Open in Cursor
+ Type=Service
+ ServiceTypes=KonqPopupMenu/Plugin
+ MimeType=inode/directory
+ X-KDE-Priority=TopLevel
+ Actions=openInCursor
+
+ [Desktop Action openInCursor]
+ Name=Open in Cursor
+ Exec=/opt/cursor/cursor.AppImage --no-sandbox
+ Icon=/opt/cursor/cursor.png

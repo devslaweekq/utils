@@ -1,0 +1,47 @@
+
+services:
+  unbound:
+    image: mvance/unbound:latest
+    container_name: unbound
+    restart: unless-stopped
+    hostname: "unbound"
+    volumes:
+      - "./unbound_data/:/opt/cursor/unbound/etc/unbound/"
+    networks:
+      admin_network:
+        ipv4_address: 10.10.11.200
+
+  pihole:
+    image: pihole/pihole:latest
+    depends_on: [unbound]
+    container_name: pihole
+    hostname: pihole
+    restart: unless-stopped
+    networks:
+      admin_network:
+        ipv4_address: 10.10.11.100
+    dns:
+      - 127.0.0.1
+      - 10.10.11.200 # Points to unbound
+    volumes:
+      - ./pihole/:/etc/pihole/
+      - ./dnsmasq.d:/etc/dnsmasq.d/
+      - /etc/localtime:/etc/localtime
+    ports:
+      - '7003:80'
+    cap_add:
+      - NET_ADMIN
+    environment:
+      TZ: "Europe/Novosibirsk"
+      WEBPASSWORD: "88C1mgzd1Q[" # Blank password - Can be whatever you want.
+      ServerIP: 10.10.11.100 # Internal IP of pihole
+      DNS1: 10.10.11.200 # Unbound IP
+      DNS2: 10.10.11.200 # If we don't specify two, it will auto pick google.
+
+networks:
+  admin_network:
+    external: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.11.0/24
