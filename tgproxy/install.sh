@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# cd ~
+# curl -o installProxy.sh https://raw.githubusercontent.com/devslaweekq/utils/main/tgproxy/install.sh
+# chmod +x installProxy.sh
+# sudo ./installProxy.sh
+
 #
 # Installation of a SOCKS5 proxy with authentication (Dante) on Ubuntu.
 # Suitable for use with Telegram (SOCKS5 + username/password).
@@ -56,7 +61,11 @@ done
 NET_IFACE_DEFAULT="$(ip route show default 2>/dev/null | awk '/default/ {print $5; exit}' || echo 'eth0')"
 NET_IFACE="$(ask_default 'Network interface to accept connections from (usually eth0/ens3/ens160)' "$NET_IFACE_DEFAULT")"
 
-ALLOW_SUBNET_DEFAULT="$(ip -4 addr show "$NET_IFACE" 2>/dev/null | awk '/inet / {print $2; exit}' || echo '0.0.0.0/0')"
+# By default allow all IPv4 clients to use the proxy.
+# You can restrict this later in /etc/danted.conf if needed.
+# ALLOW_SUBNET_DEFAULT="$(ip -4 addr show "$NET_IFACE" 2>/dev/null | awk '/inet / {print $2; exit}' || echo '0.0.0.0/0')"
+
+ALLOW_SUBNET_DEFAULT="0.0.0.0/0"
 ALLOW_SUBNET="$(ask_default 'Subnet allowed to use the proxy (for example 0.0.0.0/0 or 10.0.0.0/24)' "$ALLOW_SUBNET_DEFAULT")"
 
 echo
@@ -117,7 +126,7 @@ client block {
     log: connect error
 }
 
-sockspass {
+socks pass {
     from: 0.0.0.0/0 to: 0.0.0.0/0
     log: connect disconnect error
 }

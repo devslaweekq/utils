@@ -1,170 +1,170 @@
-# Решение проблемы автоматического изменения уровня входа микрофона
+# Fixing the automatic microphone input level change problem
 
-## 🎤 Описание проблемы
+## 🎤 Problem description
 
-В Ubuntu с PipeWire микрофон может автоматически снижать уровень входа когда вы:
+In Ubuntu with PipeWire the microphone can automatically lower the input level when you:
 
--   Кашляете
--   Громко говорите
--   Производите резкие звуки
+-   Cough
+-   Speak loudly
+-   Produce sharp/impulsive sounds
 
-Результат: ползунок "Input Volume" сдвигается влево, и собеседники перестают вас слышать.
+Result: the "Input Volume" slider moves left and people stop hearing you.
 
-## ✅ Решение
+## ✅ Solution
 
-Скрипт `fix-input-level.sh` полностью решает эту проблему.
+The `fix-input-level.sh` script completely solves this problem.
 
-### 🛠️ Что делает скрипт:
+### 🛠️ What the script does:
 
-1. **Мониторинг** - проверяет уровень каждые 0.2 секунды
-2. **Мгновенное восстановление** - при снижении ниже 95% сразу восстанавливает до 100%
-3. **Множественная защита** - использует wpctl, pactl и amixer одновременно
-4. **Конфигурация WirePlumber** - блокирует автоматическое управление на системном уровне
-5. **Автозапуск** - systemd сервис запускается при загрузке системы
+1. **Monitoring** – checks the level every 0.2 seconds
+2. **Instant restore** – if it drops below 95% it immediately restores to 100%
+3. **Multiple protection** – uses `wpctl`, `pactl` and `amixer` together
+4. **WirePlumber configuration** – blocks automatic control at the system level
+5. **Autostart** – a systemd service starts automatically at login
 
-## 🚀 Использование
+## 🚀 Usage
 
-### Полная настройка (один раз)
+### Full setup (run once)
 
 ```bash
 ./utils/mic/fix-input-level.sh
 ```
 
-### Управление
+### Control
 
 ```bash
-# Проверить статус
+# Check status
 ./utils/mic/fix-input-level.sh --status
 
-# Перезапустить мониторинг
+# Restart monitoring
 ./utils/mic/fix-input-level.sh --restart
 
-# Остановить мониторинг
+# Stop monitoring
 ./utils/mic/fix-input-level.sh --stop
 
-# Протестировать восстановление
+# Test level restoration
 ./utils/mic/fix-input-level.sh --test
 ```
 
-### Управление через systemd
+### Control via systemd
 
 ```bash
-# Статус сервиса
+# Service status
 systemctl --user status mic-level-keeper
 
-# Перезапуск
+# Restart
 systemctl --user restart mic-level-keeper
 
-# Остановка
+# Stop
 systemctl --user stop mic-level-keeper
 
-# Запуск
+# Start
 systemctl --user start mic-level-keeper
 ```
 
-## 📊 Мониторинг
+## 📊 Monitoring
 
-### Логи
+### Logs
 
 ```bash
-# Смотреть логи в реальном времени
+# Watch logs in real time
 tail -f /tmp/mic-level-keeper.log
 
-# Последние записи
+# Last entries
 tail -10 /tmp/mic-level-keeper.log
 ```
 
-### Проверка работы
+### Checking that it works
 
 ```bash
-# Проверить текущий уровень микрофона
+# Check current microphone level
 wpctl get-volume 55
 
-# Принудительно снизить для теста
+# Force level down for testing
 wpctl set-volume 55 0.3
 
-# Подождать 1-2 секунды и проверить восстановление
+# Wait 1–2 seconds and check that it was restored
 wpctl get-volume 55
 ```
 
-## 📁 Созданные файлы
+## 📁 Created files
 
-### Основные компоненты
+### Main components
 
--   `~/.local/bin/mic-level-keeper` - основной мониторинг
--   `~/.config/systemd/user/mic-level-keeper.service` - автозапуск
--   `~/.config/wireplumber/main.lua.d/99-disable-input-auto-control.lua` - блокировка WirePlumber
+-   `~/.local/bin/mic-level-keeper` – main monitoring script
+-   `~/.config/systemd/user/mic-level-keeper.service` – autostart service
+-   `~/.config/wireplumber/main.lua.d/99-disable-input-auto-control.lua` – WirePlumber blocking config
 
-### Логи и состояние
+### Logs and state
 
--   `/tmp/mic-level-keeper.log` - логи мониторинга
--   `~/.local/share/mic-level-keeper.pid` - PID процесса
+-   `/tmp/mic-level-keeper.log` – monitoring log
+-   `~/.local/share/mic-level-keeper.pid` – PID of the process
 
-## 🔧 Диагностика
+## 🔧 Diagnostics
 
-### Проблема: Мониторинг не работает
+### Problem: monitoring does not work
 
 ```bash
-# Проверить статус
+# Check status
 ./Linux/fix-input-level.sh --status
 
-# Перезапустить
+# Restart
 ./Linux/fix-input-level.sh --restart
 
-# Проверить логи
+# Check logs
 tail -5 /tmp/mic-level-keeper.log
 ```
 
-### Проблема: Уровень все еще снижается
+### Problem: level still goes down
 
 ```bash
-# Протестировать восстановление
+# Test level restoration
 ./Linux/fix-input-level.sh --test
 
-# Если тест не проходит, переустановить
+# If the test fails, reinstall
 ./Linux/fix-input-level.sh
 ```
 
-### Проблема: Сервис не запускается
+### Problem: service does not start
 
 ```bash
-# Перезагрузить systemd
+# Reload systemd
 systemctl --user daemon-reload
 
-# Включить сервис
+# Enable service
 systemctl --user enable mic-level-keeper.service
 
-# Запустить
+# Start
 systemctl --user start mic-level-keeper.service
 ```
 
-## ⚡ Результат
+## ⚡ Result
 
-После настройки:
+After setup:
 
--   ✅ Ползунок "Input Volume" остается на месте
--   ✅ При снижении автоматически восстанавливается за 0.2-0.4 секунды
--   ✅ Собеседники стабильно вас слышат
--   ✅ Работает после перезагрузки системы
--   ✅ Не влияет на другие функции (эхоподавление, шумоподавление)
+-   ✅ The "Input Volume" slider stays in place
+-   ✅ When it drops it is automatically restored within 0.2–0.4 seconds
+-   ✅ People hear you consistently
+-   ✅ Works after system reboot
+-   ✅ Does not break other features (echo cancellation, noise reduction)
 
-## 🆘 Поддержка
+## 🆘 Support
 
-При проблемах:
+If you have issues:
 
-1. Запустите: `./Linux/fix-input-level.sh --status`
-2. Проверьте логи: `tail -10 /tmp/mic-level-keeper.log`
-3. Протестируйте: `./Linux/fix-input-level.sh --test`
-
----
-
-## 📝 Разница со скриптом micro.sh
-
--   **`micro.sh`** - базовые настройки микрофона, НЕ решает проблему автоматического уровня
--   **`fix-input-level.sh`** - полное решение проблемы автоматического изменения уровня входа
-
-**Для решения проблемы с ползунком используйте ТОЛЬКО `fix-input-level.sh`!**
+1. Run: `./Linux/fix-input-level.sh --status`
+2. Check logs: `tail -10 /tmp/mic-level-keeper.log`
+3. Test: `./Linux/fix-input-level.sh --test`
 
 ---
 
-**Версия:** 2.0 **Дата:** 2025
+## 📝 Difference from `micro.sh`
+
+-   **`micro.sh`** – basic microphone tweaks, does NOT solve the automatic level problem
+-   **`fix-input-level.sh`** – full solution for the automatic input level problem
+
+**To fix the slider issue, use ONLY `fix-input-level.sh`!**
+
+---
+
+**Version:** 2.0 **Date:** 2025

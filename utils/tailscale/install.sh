@@ -4,28 +4,28 @@
 
 set -e
 
-# Проверка прав root
+# Check for root privileges
 if [[ $EUID -ne 0 ]]; then
-    echo "Ошибка: Запустите скрипт с правами root"
-    echo "Используйте: sudo $0"
+    echo "Error: Run this script with root privileges"
+    echo "Use: sudo $0"
     exit 1
 fi
 
-echo "Начинаем установку Tailscale..."
+echo "Starting Tailscale installation..."
 
-# Определение дистрибутива
+# Detect distribution
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     DISTRO=$ID
 else
-    echo "Ошибка: Не удается определить дистрибутив Linux"
+    echo "Error: Unable to determine Linux distribution"
     exit 1
 fi
 
-echo "Обнаружен дистрибутив: $DISTRO"
+echo "Detected distribution: $DISTRO"
 
-# Обновление пакетов и установка зависимостей
-echo "Обновление пакетов..."
+# Update packages and install dependencies
+echo "Updating packages..."
 case $DISTRO in
     ubuntu|debian)
         sudo apt update -qq
@@ -39,30 +39,30 @@ case $DISTRO in
         fi
         ;;
     *)
-        echo "Предупреждение: Неизвестный дистрибутив"
+        echo "Warning: Unknown distribution"
         ;;
 esac
 
-# Установка Tailscale
-echo "Установка Tailscale..."
+# Install Tailscale
+echo "Installing Tailscale..."
 curl -fsSL https://tailscale.com/install.sh | sh
 
-# Запуск сервиса
-echo "Запуск сервиса tailscaled..."
-# Настройка systemd сервиса
+# Start service
+echo "Starting tailscaled service..."
+# Configure systemd service
 sudo systemctl enable tailscaled
 sudo systemctl start tailscaled
 
-# Проверка статуса
+# Check status
 if systemctl is-active --quiet tailscaled; then
-    echo "Сервис tailscaled успешно запущен"
+    echo "tailscaled service started successfully"
 else
-    echo "Ошибка: Не удалось запустить сервис tailscaled"
+    echo "Error: Failed to start tailscaled service"
     exit 1
 fi
 
-# Настройка брандмауэра
-echo "Настройка брандмауэра..."
+# Configure firewall
+echo "Configuring firewall..."
 if command -v ufw &> /dev/null; then
     sudo ufw allow 41641/udp >/dev/null 2>&1 || true
 fi
@@ -73,28 +73,28 @@ if command -v firewall-cmd &> /dev/null && systemctl is-active --quiet firewalld
     sudo firewall-cmd --reload >/dev/null 2>&1 || true
 fi
 
-# iptables (резервный вариант)
+# iptables (fallback option)
 if command -v iptables &> /dev/null; then
     sudo iptables -I INPUT -p udp --dport 41641 -j ACCEPT
-    # Сохранение правил (зависит от дистрибутива)
+    # Save rules (implementation may depend on distribution)
     if command -v iptables-save &> /dev/null; then
         sudo iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
     fi
-    echo "Правило iptables добавлено для порта 41641/udp"
+    echo "iptables rule added for port 41641/udp"
 fi
 echo ""
-echo "Установка Tailscale завершена!"
+echo "Tailscale installation completed!"
 echo ""
-echo "Следующие шаги:"
-echo "1. Интерактивная аутентификация (рекомендуется для первой настройки): tailscale up"
-echo "2. Или использование Auth Key (для автоматизации): tailscale up --authkey=YOUR_KEY"
-echo "3. Настройка как Exit Node (для маршрутизации трафика): tailscale up --advertise-exit-node"
+echo "Next steps:"
+echo "1. Interactive authentication (recommended for first setup): tailscale up"
+echo "2. Or use an Auth Key (for automation): tailscale up --authkey=YOUR_KEY"
+echo "3. Configure as Exit Node (to route traffic): tailscale up --advertise-exit-node"
 echo ""
-echo "Полезные команды:"
-echo "  tailscale status  - статус подключения"
-echo "  tailscale ip      - ваш IP адрес"
-echo "  tailscale down    - отключиться"
+echo "Useful commands:"
+echo "  tailscale status  - connection status"
+echo "  tailscale ip      - your Tailscale IP address"
+echo "  tailscale down    - disconnect"
 echo ""
-echo "Админ-панель: https://login.tailscale.com/admin/"
+echo "Admin panel: https://login.tailscale.com/admin/"
 
 echo ""

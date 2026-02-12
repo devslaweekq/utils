@@ -1,68 +1,68 @@
 #!/bin/bash
 
-# Настройка Tailscale Exit Node
-# Конфигурирует сервер для использования в качестве VPN-выхода
+# Tailscale Exit Node setup
+# Configures the server to be used as a VPN exit node
 
 set -e
 
-echo "Настройка сервера как Tailscale Exit Node..."
+echo "Configuring server as a Tailscale Exit Node..."
 
-# Проверка прав root
+# Check for root privileges
 if [[ $EUID -ne 0 ]]; then
-    echo "Ошибка: Запустите скрипт с правами root"
-    echo "Используйте: sudo $0"
+    echo "Error: run this script as root"
+    echo "Use: sudo $0"
     exit 1
 fi
 
-# Проверка установки Tailscale
+# Check that Tailscale is installed
 if ! command -v tailscale &> /dev/null; then
-    echo "Ошибка: Tailscale не установлен"
-    echo "Сначала запустите: ./install.sh"
+    echo "Error: Tailscale is not installed"
+    echo "Run ./install.sh first"
     exit 1
 fi
 
-# Включение IP forwarding
-echo "Включение IP forwarding..."
+# Enable IP forwarding
+echo "Enabling IP forwarding..."
 echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
 echo 'net.ipv6.conf.all.forwarding = 1' >> /etc/sysctl.conf
 sysctl -p
 
-# Настройка iptables для NAT
-echo "Настройка NAT..."
+# Configure iptables for NAT
+echo "Configuring NAT..."
 
-# Определение основного интерфейса
+# Detect primary interface
 PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
-echo "Основной интерфейс: $PRIMARY_INTERFACE"
+echo "Primary interface: $PRIMARY_INTERFACE"
 
-# Добавление правил NAT
+# Add NAT rules
 iptables -t nat -A POSTROUTING -o $PRIMARY_INTERFACE -j MASQUERADE
 iptables -A FORWARD -i tailscale0 -o $PRIMARY_INTERFACE -j ACCEPT
 iptables -A FORWARD -i $PRIMARY_INTERFACE -o tailscale0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 
-# Сохранение правил iptables
+# Save iptables rules
 if command -v netfilter-persistent &> /dev/null; then
     netfilter-persistent save
 elif command -v iptables-save &> /dev/null; then
     iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
 fi
 
-echo "Правила iptables настроены"
+echo "iptables rules configured"
 
-# Запуск Tailscale как Exit Node
-echo "Запуск Tailscale как Exit Node..."
+# Start Tailscale as Exit Node
+echo "Starting Tailscale as Exit Node..."
 tailscale up --advertise-exit-node --accept-routes
 
 echo ""
 echo "====================================="
-echo "Exit Node настроен!"
+echo "Exit Node configured!"
 echo "====================================="
 echo ""
-echo "Следующие шаги:"
-echo "1. Перейдите в админ-панель: https://login.tailscale.com/admin/machines"
-echo "2. Найдите ваш сервер в списке устройств"
-echo "3. Включите опцию 'Exit node' для этого устройства"
-echo "4. Подключите другие устройства к Tailscale"
-echo "5. На устройствах выберите ваш сервер как Exit Node"
+echo "Next steps:"
+echo "1. Open the admin panel: https://login.tailscale.com/admin/machines"
+echo "2. Find your server in the devices list"
+echo "3. Enable the 'Exit node' option for this device"
+echo "4. Connect other devices to Tailscale"
+echo "5. On clients, choose your server as the Exit Node"
 echo ""
-echo "Статус: $(tailscale status --peers=false)"
+echo "Status: $(tailscale status --peers=false)"
 echo ""

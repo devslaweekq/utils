@@ -37,16 +37,16 @@ fi
 # ./qt-online.run
 # cd ~
 
-# # Добавляем пути Qt 6.9.0 в .bashrc
+# # Add Qt 6.9.0 paths to .bashrc
 # echo 'export PATH=$HOME/Qt/6.9.0/gcc_64/bin:$PATH' >> ~/.bashrc
 # echo 'export LD_LIBRARY_PATH=$HOME/Qt/6.9.0/gcc_64/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 # echo 'export QT_PLUGIN_PATH=$HOME/Qt/6.9.0/gcc_64/plugins:$QT_PLUGIN_PATH' >> ~/.bashrc
 # echo 'export QML2_IMPORT_PATH=$HOME/Qt/6.9.0/gcc_64/qml:$QML2_IMPORT_PATH' >> ~/.bashrc
 
-# # Применяем изменения к текущей сессии
+# # Apply changes to the current shell session
 # source ~/.bashrc
 
-# # Создаем символические ссылки для основных библиотек Qt
+# # Create symbolic links for main Qt libraries
 # sudo ln -sf $HOME/Qt/6.9.0/gcc_64/lib/libQt6Core.so.6 /usr/lib/libQt6Core.so.6
 # sudo ln -sf $HOME/Qt/6.9.0/gcc_64/lib/libQt6Gui.so.6 /usr/lib/libQt6Gui.so.6
 # sudo ln -sf $HOME/Qt/6.9.0/gcc_64/lib/libQt6Widgets.so.6 /usr/lib/libQt6Widgets.so.6
@@ -54,14 +54,14 @@ fi
 # sudo ln -sf $HOME/Qt/6.9.0/gcc_64/lib/libQt6Qml.so.6 /usr/lib/libQt6Qml.so.6
 # sudo ln -sf $HOME/Qt/6.9.0/gcc_64/lib/libQt6Quick.so.6 /usr/lib/libQt6Quick.so.6
 
-# # Обновляем кэш библиотек
+# # Update library cache
 # sudo ldconfig
 
-# # Создаем файл конфигурации для ldconfig
+# # Create configuration file for ldconfig
 # sudo bash -c "echo '$HOME/Qt/6.9.0/gcc_64/lib' > /etc/ld.so.conf.d/qt6.conf"
 # sudo ldconfig
 
-# # Создаем альтернативу для qmake6
+# # Create an alternative for qmake6
 # sudo update-alternatives --install /usr/bin/qmake6 qmake6 $HOME/Qt/6.9.0/gcc_64/bin/qmake6 100
 # source ~/.bashrc
 # qmake6 --version

@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# Полное решение проблемы автоматического изменения уровня входа микрофона
-# Описание: Блокирует автоматическое снижение уровня входа микрофона
+# Complete solution for the automatic microphone input level change problem
+# Description: Blocks automatic lowering of microphone input level
 
 set -e
 
 echo "================================================================="
-echo "Решение проблемы автоматического изменения уровня входа микрофона"
+echo "Solution for the automatic microphone input level change problem"
 echo "================================================================="
 
-# Функция для поиска ID микрофона
-# Сначала по имени, затем через default input устройство
+# Function to find microphone ID
+# First by name, then via default input device
 find_microphone_id() {
     local mic_id=""
 
-    # 1. Пробуем найти по имени "Headphones Stereo Microphone" (для обратной совместимости)
+    # 1. Try to find by name "Headphones Stereo Microphone" (for backward compatibility)
     mic_id=$(wpctl status 2>/dev/null | grep "Headphones Stereo Microphone" | head -1 | awk '{print $3}' | sed 's/[^0-9]//g')
 
     if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
@@ -22,11 +22,11 @@ find_microphone_id() {
         return 0
     fi
 
-    # 2. Получаем default source и ищем его ID в wpctl
+    # 2. Get the default source and search for its ID in wpctl
     local default_source=$(pactl info 2>/dev/null | grep "Default Source:" | cut -d' ' -f3)
 
     if [ ! -z "$default_source" ]; then
-        # Сначала ищем в Filters (для Bluetooth устройств) - устройство со звездочкой
+        # First search in Filters (for Bluetooth devices) — device with asterisk
         mic_id=$(wpctl status 2>/dev/null | grep "*" | grep "$default_source" | head -1 | grep -oE '[0-9]+\.' | head -1 | sed 's/\.//')
 
         if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
@@ -35,7 +35,7 @@ find_microphone_id() {
             return 0
         fi
 
-        # Ищем в Sources
+        # Then search in Sources
         mic_id=$(wpctl status 2>/dev/null | grep -A 50 "Sources:" | grep -E "^\s+[0-9]+\." | grep -F "$default_source" | head -1 | awk '{print $1}' | sed 's/[^0-9]//g')
 
         if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
@@ -49,55 +49,55 @@ find_microphone_id() {
     return 1
 }
 
-# Функция для фиксации уровня входа
+# Function to fix input level
 fix_input_level() {
-    echo "Фиксация уровня входа микрофона..."
+    echo "Fixing microphone input level..."
 
-    # Находим ID микрофона
+    # Find microphone ID
     local mic_info=$(find_microphone_id)
     local MIC_ID=$(echo "$mic_info" | cut -d'|' -f1)
     local MIC_NAME=$(echo "$mic_info" | cut -d'|' -f2)
 
     if [ ! -z "$MIC_ID" ] && [ "$MIC_ID" -gt 0 ] 2>/dev/null; then
-        echo "Найден микрофон: $MIC_NAME (ID: $MIC_ID)"
+        echo "Microphone found: $MIC_NAME (ID: $MIC_ID)"
 
-        # Устанавливаем максимальный уровень
+        # Set maximum level
         wpctl set-volume "$MIC_ID" 1.0 2>/dev/null
-        echo "✓ Уровень установлен на 100%"
+        echo "✓ Level set to 100%"
 
-        # Убеждаемся что не заглушен
+        # Ensure it is not muted
         wpctl set-mute "$MIC_ID" 0 2>/dev/null
-        echo "✓ Микрофон включен"
+        echo "✓ Microphone unmuted"
     else
-        echo "⚠️  Микрофон не найден по ID, используем общие настройки"
+        echo "⚠️  Microphone not found by ID, falling back to generic settings"
     fi
 
-    # Также через pactl (работает с любым микрофоном, включая Bluetooth)
+    # Also via pactl (works with any microphone including Bluetooth)
     pactl set-source-volume @DEFAULT_SOURCE@ 100% 2>/dev/null
     pactl set-source-mute @DEFAULT_SOURCE@ 0 2>/dev/null
-    echo "✓ Уровень через PulseAudio установлен"
+    echo "✓ Level set via PulseAudio"
 
-    # Через ALSA для надежности (только для ALSA устройств)
-    amixer -c 1 sset "Capture" 100% 2>/dev/null || echo "⚠️  ALSA настройка недоступна (нормально для Bluetooth)"
+    # Via ALSA for reliability (only for ALSA devices)
+    amixer -c 1 sset "Capture" 100% 2>/dev/null || echo "⚠️  ALSA control not available (normal for Bluetooth)"
 }
 
-# Создаем эффективный мониторинг уровня входа
+# Create an efficient input level monitor
 create_level_keeper() {
-    echo "Создание хранителя уровня входа микрофона..."
+    echo "Creating microphone input level keeper..."
 
     cat > ~/.local/bin/mic-level-keeper << 'EOF'
 #!/bin/bash
 
-# Простой и эффективный хранитель уровня микрофона
+# Simple and effective microphone level keeper
 
 LOGFILE="/tmp/mic-level-keeper.log"
 
-# Функция для поиска ID микрофона
-# Сначала по имени, затем через default input устройство
+# Function to find microphone ID
+# First by name, then via default input device
 find_microphone_id() {
     local mic_id=""
 
-    # 1. Пробуем найти по имени "Headphones Stereo Microphone" (для обратной совместимости)
+    # 1. Try to find by name "Headphones Stereo Microphone" (for backward compatibility)
     mic_id=$(wpctl status 2>/dev/null | grep "Headphones Stereo Microphone" | head -1 | awk '{print $3}' | sed 's/[^0-9]//g')
 
     if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
@@ -105,11 +105,11 @@ find_microphone_id() {
         return 0
     fi
 
-    # 2. Получаем default source и ищем его ID в wpctl
+    # 2. Get the default source and search for its ID in wpctl
     local default_source=$(pactl info 2>/dev/null | grep "Default Source:" | cut -d' ' -f3)
 
     if [ ! -z "$default_source" ]; then
-        # Сначала ищем в Filters (для Bluetooth устройств) - устройство со звездочкой
+        # First search in Filters (for Bluetooth devices) — device with asterisk
         mic_id=$(wpctl status 2>/dev/null | grep "*" | grep "$default_source" | head -1 | grep -oE '[0-9]+\.' | head -1 | sed 's/\.//')
 
         if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
@@ -118,7 +118,7 @@ find_microphone_id() {
             return 0
         fi
 
-        # Ищем в Sources
+        # Then search in Sources
         mic_id=$(wpctl status 2>/dev/null | grep -A 50 "Sources:" | grep -E "^\s+[0-9]+\." | grep -F "$default_source" | head -1 | awk '{print $1}' | sed 's/[^0-9]//g')
 
         if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
@@ -135,24 +135,24 @@ find_microphone_id() {
 echo "$(date): Starting microphone level keeper" >> "$LOGFILE"
 
 while true; do
-    # Находим ID микрофона каждый раз заново (может измениться при перезапуске PipeWire)
+    # Find microphone ID each time (it may change when PipeWire restarts)
     mic_info=$(find_microphone_id)
     MIC_ID=$(echo "$mic_info" | cut -d'|' -f1)
     MIC_NAME=$(echo "$mic_info" | cut -d'|' -f2)
 
-    if [ ! -z "$MIC_ID" ] && [ "$MIC_ID" -gt 0 ] 2>/dev/null; then
-        # Получаем текущий уровень
+        if [ ! -z "$MIC_ID" ] && [ "$MIC_ID" -gt 0 ] 2>/dev/null; then
+        # Get current level
         CURRENT_VOLUME=$(wpctl get-volume "$MIC_ID" 2>/dev/null | awk '{print $2}')
 
-        if [ ! -z "$CURRENT_VOLUME" ]; then
-            # Конвертируем в проценты для удобства
+            if [ ! -z "$CURRENT_VOLUME" ]; then
+            # Convert to percent for convenience
             CURRENT_PERCENT=$(echo "$CURRENT_VOLUME * 100" | bc -l 2>/dev/null | cut -d. -f1)
 
-            # Если уровень меньше 95%, восстанавливаем до 100%
+            # If level is below 95%, restore to 100%
             if [ ! -z "$CURRENT_PERCENT" ] && [ "$CURRENT_PERCENT" -lt 95 ] 2>/dev/null; then
                 echo "$(date): Level dropped to ${CURRENT_PERCENT}% on $MIC_NAME (ID: $MIC_ID), restoring to 100%" >> "$LOGFILE"
 
-                # Восстанавливаем уровень тремя способами
+                # Restore level in three ways
                 wpctl set-volume "$MIC_ID" 1.0 2>/dev/null
                 pactl set-source-volume @DEFAULT_SOURCE@ 100% 2>/dev/null
                 amixer -c 1 sset "Capture" 100% 2>/dev/null
@@ -160,33 +160,33 @@ while true; do
                 echo "$(date): Level restored to 100%" >> "$LOGFILE"
             fi
         fi
-    else
-        # Логируем только раз в 10 секунд, чтобы не засорять лог
+        else
+        # Log only once every 10 seconds to avoid log spam
         if [ -z "$LAST_LOG_TIME" ] || [ $(($(date +%s) - LAST_LOG_TIME)) -ge 10 ]; then
             echo "$(date): Microphone not found, searching..." >> "$LOGFILE"
             LAST_LOG_TIME=$(date +%s)
         fi
     fi
 
-    # Проверяем каждые 0.2 секунды для быстрой реакции
+    # Check every 0.2 seconds for fast reaction
     sleep 0.2
 done
 EOF
 
     chmod +x ~/.local/bin/mic-level-keeper
-    echo "✓ Хранитель уровня создан: ~/.local/bin/mic-level-keeper"
+    echo "✓ Level keeper created: ~/.local/bin/mic-level-keeper"
 }
 
-# Создаем конфигурацию WirePlumber для блокировки автоматического управления
+# Create WirePlumber configuration to block automatic control
 create_wireplumber_config() {
-    echo "Создание конфигурации WirePlumber..."
+    echo "Creating WirePlumber configuration..."
 
     mkdir -p ~/.config/wireplumber/main.lua.d
 
     cat > ~/.config/wireplumber/main.lua.d/99-disable-input-auto-control.lua << 'EOF'
--- Блокировка автоматического управления уровнем входа микрофона
+-- Block automatic microphone input level control
 
--- Правила для блокировки автоматического управления уровнем
+-- Rules to block automatic level control
 rule_input_level = {
   matches = {
     {
@@ -195,18 +195,18 @@ rule_input_level = {
     },
   },
   apply_properties = {
-    -- Отключаем автоматическое управление уровнем
+    -- Disable automatic level control
     ["audio.auto-gain-control.enable"] = false,
     ["audio.agc.enable"] = false,
     ["device.auto-volume"] = false,
     ["device.auto-level"] = false,
     ["alsa.auto-gain"] = false,
 
-    -- Блокируем изменения громкости
+    -- Block volume changes
     ["volume.lock"] = true,
     ["volume.auto"] = false,
 
-    -- Фиксируем уровень
+    -- Fix the level
     ["volume"] = 1.0,
     ["mute"] = false,
   },
@@ -214,17 +214,17 @@ rule_input_level = {
 
 table.insert(alsa_monitor.rules, rule_input_level)
 
--- Мониторинг изменений уровня в реальном времени
+-- Real-time monitoring of level changes
 local function monitor_input_level()
   for node in nodes_om:iterate() do
     if node.properties["media.class"] == "Audio/Source" and
        node.properties["node.name"] and
        string.match(node.properties["node.name"], "Mic") then
 
-      -- Подключаем обработчик изменений параметров
+      -- Attach parameter change handler
       node:connect("params-changed", function(node, param_name)
         if param_name == "Props" then
-          -- Принудительно восстанавливаем уровень
+          -- Forcefully restore level
           node:set_param("Props", Pod.Object {
             "Spa:Pod:Object:Param:Props", "Props",
             volume = 1.0,
@@ -239,27 +239,27 @@ local function monitor_input_level()
   end
 end
 
--- Запускаем мониторинг с задержкой
+-- Start monitoring with a delay
 Core.timeout_add(1000, function()
   monitor_input_level()
   return false
 end)
 
--- Мониторинг новых устройств
+-- Monitor new devices
 nodes_om:connect("object-added", function(om, node)
   if node.properties["media.class"] == "Audio/Source" and
      node.properties["node.name"] and
      string.match(node.properties["node.name"], "Mic") then
 
     Core.timeout_add(500, function()
-      -- Устанавливаем фиксированные параметры
+      -- Set fixed parameters
       node:set_param("Props", Pod.Object {
         "Spa:Pod:Object:Param:Props", "Props",
         volume = 1.0,
         mute = false,
       })
 
-      -- Подключаем мониторинг
+      -- Attach monitoring
       node:connect("params-changed", function(node, param_name)
         if param_name == "Props" then
           node:set_param("Props", Pod.Object {
@@ -277,18 +277,18 @@ nodes_om:connect("object-added", function(om, node)
 end)
 EOF
 
-    echo "✓ Конфигурация WirePlumber создана"
+    echo "✓ WirePlumber configuration created"
 }
 
-# Создаем systemd сервис для автозапуска
+# Create systemd service for autostart
 create_systemd_service() {
-    echo "Создание systemd сервиса..."
+    echo "Creating systemd service..."
 
     mkdir -p ~/.config/systemd/user
 
     cat > ~/.config/systemd/user/mic-level-keeper.service << 'EOF'
 [Unit]
-Description=Хранитель уровня входа микрофона
+Description=Microphone input level keeper
 After=pipewire.service
 
 [Service]
@@ -301,133 +301,133 @@ RestartSec=2
 WantedBy=default.target
 EOF
 
-    # Перезагружаем и включаем сервис
+    # Reload and enable service
     systemctl --user daemon-reload
     systemctl --user enable mic-level-keeper.service
 
-    echo "✓ Systemd сервис создан и включен"
+    echo "✓ Systemd service created and enabled"
 }
 
-# Функция для запуска мониторинга
+# Function to start monitoring
 start_monitoring() {
-    echo "Запуск мониторинга уровня входа..."
+    echo "Starting input level monitoring..."
 
-    # Останавливаем старые процессы
+    # Stop old processes
     pkill -f mic-level-keeper 2>/dev/null || true
     sleep 0.5
 
-    # Запускаем через systemd
+    # Start via systemd
     if systemctl --user start mic-level-keeper.service 2>/dev/null; then
         sleep 0.5
         SERVICE_PID=$(systemctl --user show mic-level-keeper.service -p MainPID --value 2>/dev/null)
         if [ ! -z "$SERVICE_PID" ] && [ "$SERVICE_PID" != "0" ]; then
-            echo "✓ Мониторинг запущен через systemd (PID: $SERVICE_PID)"
+            echo "✓ Monitoring started via systemd (PID: $SERVICE_PID)"
         else
-            echo "✓ Мониторинг запущен через systemd"
+            echo "✓ Monitoring started via systemd"
         fi
     else
-        # Fallback: запускаем вручную, если systemd не работает
+        # Fallback: start manually if systemd is not available
         ~/.local/bin/mic-level-keeper &
         MONITOR_PID=$!
         echo "$MONITOR_PID" > ~/.local/share/mic-level-keeper.pid
-        echo "✓ Мониторинг запущен вручную (PID: $MONITOR_PID)"
+        echo "✓ Monitoring started manually (PID: $MONITOR_PID)"
     fi
 }
 
-# Функция для проверки состояния
+# Function to check status
 check_status() {
     echo "================================================================="
-    echo "Статус решения проблемы уровня входа микрофона:"
+    echo "Status of the microphone input level fix:"
     echo "================================================================="
 
-    echo "--- Текущий уровень микрофона ---"
+    echo "--- Current microphone level ---"
     mic_info=$(find_microphone_id)
     MIC_ID=$(echo "$mic_info" | cut -d'|' -f1)
     MIC_NAME=$(echo "$mic_info" | cut -d'|' -f2)
     if [ ! -z "$MIC_ID" ] && [ "$MIC_ID" -gt 0 ] 2>/dev/null; then
         CURRENT_VOLUME=$(wpctl get-volume "$MIC_ID" 2>/dev/null | awk '{print $2}')
         CURRENT_PERCENT=$(echo "$CURRENT_VOLUME * 100" | bc -l 2>/dev/null | cut -d. -f1)
-        echo "Микрофон: $MIC_NAME (ID: $MIC_ID)"
-        echo "Текущий уровень: ${CURRENT_PERCENT}%"
+        echo "Microphone: $MIC_NAME (ID: $MIC_ID)"
+        echo "Current level: ${CURRENT_PERCENT}%"
     else
-        echo "❌ Микрофон не найден"
+        echo "❌ Microphone not found"
     fi
 
-    echo -e "\n--- Статус мониторинга ---"
-    # Проверяем через systemd сервис
+    echo -e "\n--- Monitoring status ---"
+    # Check via systemd service
     if systemctl --user is-active mic-level-keeper.service >/dev/null 2>&1; then
         SERVICE_PID=$(systemctl --user show mic-level-keeper.service -p MainPID --value 2>/dev/null)
         if [ ! -z "$SERVICE_PID" ] && [ "$SERVICE_PID" != "0" ]; then
-            echo "✅ Мониторинг активен через systemd (PID: $SERVICE_PID)"
+            echo "✅ Monitoring is active via systemd (PID: $SERVICE_PID)"
         else
-            echo "✅ Мониторинг активен через systemd"
+            echo "✅ Monitoring is active via systemd"
         fi
     elif [ -f ~/.local/share/mic-level-keeper.pid ]; then
         pid=$(cat ~/.local/share/mic-level-keeper.pid 2>/dev/null)
         if [ ! -z "$pid" ] && ps -p "$pid" > /dev/null 2>&1; then
-            echo "✅ Мониторинг активен вручную (PID: $pid)"
+            echo "✅ Monitoring is active manually (PID: $pid)"
         else
-            echo "❌ Мониторинг не активен"
+            echo "❌ Monitoring is not active"
         fi
     else
-        echo "❌ Мониторинг не запущен"
+        echo "❌ Monitoring is not running"
     fi
 
-    echo -e "\n--- Системный сервис ---"
+    echo -e "\n--- System service ---"
     if systemctl --user is-enabled mic-level-keeper.service >/dev/null 2>&1; then
-        echo "✅ Автозапуск включен"
+        echo "✅ Autostart enabled"
         SERVICE_STATUS=$(systemctl --user is-active mic-level-keeper.service 2>&1)
         if [ "$SERVICE_STATUS" = "active" ]; then
-            echo "✅ Сервис активен"
+            echo "✅ Service is active"
         else
-            echo "⚠️  Сервис неактивен (статус: $SERVICE_STATUS)"
+            echo "⚠️  Service is not active (status: $SERVICE_STATUS)"
         fi
     else
-        echo "❌ Автозапуск отключен"
+        echo "❌ Autostart disabled"
     fi
 
-    echo -e "\n--- Файлы конфигурации ---"
+    echo -e "\n--- Configuration files ---"
     if [ -f ~/.local/bin/mic-level-keeper ]; then
-        echo "✅ Скрипт мониторинга: ~/.local/bin/mic-level-keeper"
+        echo "✅ Monitoring script: ~/.local/bin/mic-level-keeper"
     else
-        echo "❌ Скрипт мониторинга отсутствует"
+        echo "❌ Monitoring script is missing"
     fi
 
     if [ -f ~/.config/wireplumber/main.lua.d/99-disable-input-auto-control.lua ]; then
-        echo "✅ Конфигурация WirePlumber: ~/.config/wireplumber/main.lua.d/99-disable-input-auto-control.lua"
+        echo "✅ WirePlumber config: ~/.config/wireplumber/main.lua.d/99-disable-input-auto-control.lua"
     else
-        echo "❌ Конфигурация WirePlumber отсутствует"
+        echo "❌ WirePlumber configuration is missing"
     fi
 
     if [ -f ~/.config/systemd/user/mic-level-keeper.service ]; then
-        echo "✅ Systemd сервис: ~/.config/systemd/user/mic-level-keeper.service"
+        echo "✅ Systemd service: ~/.config/systemd/user/mic-level-keeper.service"
     else
-        echo "❌ Systemd сервис отсутствует"
+        echo "❌ Systemd service is missing"
     fi
 
-    echo -e "\n--- Логи мониторинга ---"
+    echo -e "\n--- Monitoring logs ---"
     if [ -f /tmp/mic-level-keeper.log ]; then
-        echo "Последние 3 записи:"
+        echo "Last 3 entries:"
         tail -3 /tmp/mic-level-keeper.log
     else
-        echo "Логи отсутствуют"
+        echo "No logs found"
     fi
 }
 
-# Основная функция
+# Main function
 main() {
-    echo "Начинаем полное решение проблемы автоматического уровня входа..."
+    echo "Starting full solution for the automatic input level problem..."
 
-    # Проверяем права
+    # Check privileges
     if [ "$EUID" -eq 0 ]; then
-        echo "⚠️  Не запускайте этот скрипт от root!"
+        echo "⚠️  Do NOT run this script as root!"
         exit 1
     fi
 
-    # Создаем необходимые директории
+    # Create required directories
     mkdir -p ~/.local/bin ~/.local/share ~/.config/systemd/user ~/.config/wireplumber/main.lua.d
 
-    # Выполняем все этапы
+    # Run all steps
     fix_input_level
     create_level_keeper
     create_wireplumber_config
@@ -435,91 +435,91 @@ main() {
     start_monitoring
 
     echo "================================================================="
-    echo "✅ Проблема автоматического изменения уровня входа РЕШЕНА!"
+    echo "✅ The problem of automatic input level change is SOLVED!"
     echo "================================================================="
     echo ""
-    echo "Что было сделано:"
-    echo "1. Создан эффективный мониторинг уровня входа (проверка каждые 0.2 сек)"
-    echo "2. Настроен WirePlumber для блокировки автоматического управления"
-    echo "3. Создан systemd сервис для автозапуска"
-    echo "4. Мониторинг запущен немедленно"
-    echo "5. Уровень входа зафиксирован на 100%"
+    echo "What has been done:"
+    echo "1. Created an effective input level monitor (checks every 0.2 seconds)"
+    echo "2. Configured WirePlumber to block automatic level control"
+    echo "3. Created a systemd service for autostart"
+    echo "4. Monitoring started immediately"
+    echo "5. Input level fixed at 100%"
     echo ""
-    echo "Управление:"
-    echo "  systemctl --user start mic-level-keeper   - запустить"
-    echo "  systemctl --user stop mic-level-keeper    - остановить"
-    echo "  systemctl --user status mic-level-keeper  - статус"
+    echo "Control:"
+    echo "  systemctl --user start mic-level-keeper   - start"
+    echo "  systemctl --user stop mic-level-keeper    - stop"
+    echo "  systemctl --user status mic-level-keeper  - status"
     echo ""
-    echo "Логи: tail -f /tmp/mic-level-keeper.log"
+    echo "Logs: tail -f /tmp/mic-level-keeper.log"
     echo ""
-    echo "🎤 Теперь ползунок Input Volume НЕ будет сдвигаться влево!"
-    echo "    При снижении уровня он автоматически восстановится до 100%."
+    echo "🎤 Now the Input Volume slider will NOT move left!"
+    echo "    When the level drops, it will automatically be restored to 100%."
 
     echo ""
     check_status
 }
 
-# Проверяем аргументы
+# Parse arguments
 case "${1:-}" in
     --status)
         check_status
         exit 0
         ;;
     --stop)
-        echo "Остановка мониторинга..."
-        pkill -f mic-level-keeper 2>/dev/null && echo "✓ Процесс остановлен" || echo "Процесс не найден"
-        systemctl --user stop mic-level-keeper 2>/dev/null && echo "✓ Сервис остановлен" || echo "Сервис не был запущен"
+        echo "Stopping monitoring..."
+        pkill -f mic-level-keeper 2>/dev/null && echo "✓ Process stopped" || echo "Process not found"
+        systemctl --user stop mic-level-keeper 2>/dev/null && echo "✓ Service stopped" || echo "Service was not running"
         rm -f ~/.local/share/mic-level-keeper.pid
         exit 0
         ;;
     --restart)
-        echo "Перезапуск мониторинга..."
+        echo "Restarting monitoring..."
         systemctl --user restart mic-level-keeper
-        echo "✓ Сервис перезапущен"
+        echo "✓ Service restarted"
         exit 0
         ;;
     --test)
-        echo "Тестирование восстановления уровня..."
+        echo "Testing level restoration..."
         mic_info=$(find_microphone_id)
         MIC_ID=$(echo "$mic_info" | cut -d'|' -f1)
         MIC_NAME=$(echo "$mic_info" | cut -d'|' -f2)
         if [ ! -z "$MIC_ID" ] && [ "$MIC_ID" -gt 0 ] 2>/dev/null; then
-            echo "Тестируем микрофон: $MIC_NAME (ID: $MIC_ID)"
-            echo "Снижаем уровень до 20%..."
+            echo "Testing microphone: $MIC_NAME (ID: $MIC_ID)"
+            echo "Lowering level to 20%..."
             wpctl set-volume "$MIC_ID" 0.2 2>/dev/null
-            echo "Ждем 3 секунды восстановления..."
+            echo "Waiting 3 seconds for recovery..."
             sleep 3
             CURRENT_VOLUME=$(wpctl get-volume "$MIC_ID" 2>/dev/null | awk '{print $2}')
             CURRENT_PERCENT=$(echo "$CURRENT_VOLUME * 100" | bc -l 2>/dev/null | cut -d. -f1)
-            echo "Текущий уровень: ${CURRENT_PERCENT}%"
+            echo "Current level: ${CURRENT_PERCENT}%"
             if [ "$CURRENT_PERCENT" -gt 90 ]; then
-                echo "✅ Тест ПРОШЕЛ! Уровень восстановился."
+                echo "✅ TEST PASSED! Level was restored."
             else
-                echo "❌ Тест НЕ ПРОШЕЛ! Уровень не восстановился."
+                echo "❌ TEST FAILED! Level was not restored."
             fi
         else
-            echo "❌ Микрофон не найден для тестирования"
+            echo "❌ Microphone not found for testing"
         fi
         exit 0
         ;;
     --help|-h)
-        echo "Использование: $0 [опция]"
+        echo "Usage: $0 [option]"
         echo ""
-        echo "Опции:"
-        echo "  (без опций)  - Выполнить полную настройку"
-        echo "  --status     - Проверить статус"
-        echo "  --stop       - Остановить мониторинг"
-        echo "  --restart    - Перезапустить мониторинг"
-        echo "  --test       - Протестировать восстановление уровня"
-        echo "  --help, -h   - Показать эту справку"
+        echo "Options:"
+        echo "  (no options) - Perform full setup"
+        echo "  --status     - Check status"
+        echo "  --stop       - Stop monitoring"
+        echo "  --restart    - Restart monitoring"
+        echo "  --test       - Test level restoration"
+        echo "  --help, -h   - Show this help"
         exit 0
         ;;
     "")
         main
         ;;
     *)
-        echo "❌ Неизвестная опция: $1"
-        echo "Используйте --help для справки"
+        echo "❌ Unknown option: $1"
+        echo "Use --help for usage information"
         exit 1
         ;;
 esac

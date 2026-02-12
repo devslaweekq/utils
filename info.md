@@ -86,9 +86,9 @@ git clone https://github.com/AdguardTeam/dnsproxy.git \
 ./dnsproxy -u sdns://AgcAAAAAAAAABzEuMC4wLjGgENk8mGSlIfMGXMOlIlCcKvq7AVgcrZxtjon911-ep0cg63Ul-I8NlFj4GplQGb_TTLiczclX57DvMV8Q-JdjgRgSZG5zLmNsb3VkZmxhcmUuY29tCi9kbnMtcXVlcnk
 ```
 
-### Этот ключ берется с инструкции проекта dnsproxy на github.com https://github.com/AdguardTeam/dnsproxy при желании можно указать другие виды шифрования, примеры указаны там же.
+### This key is taken from the dnsproxy project documentation on github.com `https://github.com/AdguardTeam/dnsproxy`. You can use other encryption types if you wish; examples are provided there.
 
-### Затем правила для рекурсивного DNS:
+### Then add rules for recursive DNS:
 
 ```
 sudo iptables -A INPUT -s 10.20.20.0/24 -p tcp -m tcp --dport 53 -m conntrack --ctstate NEW -j ACCEPT
@@ -96,9 +96,9 @@ sudo iptables -A INPUT -s 10.20.20.0/24 -p udp -m udp --dport 53 -m conntrack --
 ```
 
 
-### Виртуальные ip адреса 10.20.20.0/24 меняем, на адрес вашей подсети Wirguard.
+### Replace the virtual IP addresses `10.20.20.0/24` with the subnet of your WireGuard network.
 
-### Чтобы сохранить маршруты ставим и настраиваем iptables-persistent
+### To persist the routes, install and configure iptables-persistent
 
 ```
 sudo apt install -y iptables-persistent
@@ -111,26 +111,26 @@ sudo netfilter-persistent save
 ```
 
 
-### Ставим Pihole для блокировки рекламы.
+### Install Pi-hole to block ads.
 ```
 sudo curl -sSL https://install.pi-hole.net | bash
 ```
 
-#### После запуска скрипта выбираем виртуальный интерфейс нашего wireguard - wg0. Далее жмем Enter и в конце сохраняем пароль для веб интерфейса программы.
+#### After the installer starts, choose the virtual interface of your WireGuard (`wg0`). Then press Enter and at the end save the password for the program web interface.
 
 
 
 
-# 5. Переходим к установке и настройке своего DNS сервера.
+# 5. Proceed to installation and configuration of your own DNS server.
 
-# Установим Unbound DNS:
+# Install Unbound DNS:
 sudo apt install -y unbound unbound-host -y
-# Скопируем DNS записи:
+# Download DNS root hints:
 curl -o /var/lib/unbound/root.hints https://www.internic.net/domain/named.cache
-# Создаем конфиг /etc/unbound/unbound.conf.d/pi-hole.conf
+# Create config `/etc/unbound/unbound.conf.d/pi-hole.conf`
 
 nano /etc/unbound/unbound.conf.d/pi-hole.conf
-# Туда копируем эту конфигурацию:
+# Copy this configuration there:
 
 ```
 server:
@@ -201,9 +201,9 @@ server:
      private-address: fe80::/10
 ```
 
-- Виртуальный адрес access-control: 10.20.20.0/24 меняем на адрес своей подсети!
+- Replace the virtual address `access-control: 10.20.20.0/24` with the address of your own subnet.
 
-- Ребутим сервер командой reboot и проверяем работу DNS сервера командами:
+- Reboot the server with `reboot` and verify the DNS server with the commands:
 
 dig pi-hole.net @127.0.0.1 -p 5353
 
@@ -211,27 +211,27 @@ dig sigfail.verteiltesysteme.net @127.0.0.1 -p 5353
 
 dig sigok.verteiltesysteme.net @127.0.0.1 -p 5353
 
-- В первом и третьем случае должен выдаваться статус NOERROR, во втором SERFAIL. Если выводы такие - то все супер.
+- In the first and third case the status should be `NOERROR`, and in the second case `SERVFAIL`. If the output matches this, everything is working correctly.
 
-- Далее в браузере открываем веб интерфейс Pihole. Адрес будет такой же, как и адрес VPS сервера и /admin (пример http://185.18.55.137/admin). Переходим на вкладку настроек и делаем как на картинке:
+- Next open the Pi-hole web interface in a browser. The address will be the same as the VPS server address plus `/admin` (for example `http://185.18.55.137/admin`). Go to the settings tab and configure it as on your reference screenshot.
 
-- Внизу еще можно поставить галочку Use DNSSEC и сохранить.
+- At the bottom you can also enable the `Use DNSSEC` checkbox and save.
 
-- Ну и хорошо бы закрыть веб интерфейс Pihole чтобы его не брутили. Оставим доступ только из внутренней подсети:
+- It is a good idea to restrict access to the Pi-hole web interface so it cannot be brute-forced. We will allow access only from the internal subnet:
 
 iptables -A INPUT -s 10.55.55.0/24 -p tcp --dport 80 -j ACCEPT
 
 iptables -A INPUT -p tcp --dport 80 -j DROP
-- Также не забывает тут подставить свою виртуальную сеть вместо 10.55.55.0/24.
+- Also remember to replace `10.55.55.0/24` with your own virtual network here.
 
-- 6. Чтобы протестировать все настраиваемые сервисы, переходим по ссылкам:
+- 6. To test all configured services, open these links:
 
-- Тест на утечку DNS трафика https://dnsleak.com/
-- и https://www.dnsleaktest.com/ тут адрес DNS сервера должен совпадать с белым IP адресом нашего VPS сервера.
+- DNS leak test `https://dnsleak.com/`
+- and `https://www.dnsleaktest.com/` — the DNS server address there should match the public IP address of your VPS server.
 
 # P.S.
 
-- Для большей эффективности Pihole, можно добавить дополнительные источники с адресами для фильтрации мусорного трафика. Я добавлял эти:
+- For greater effectiveness of Pi-hole you can add additional sources with blocklists for filtering unwanted traffic. For example:
 
 - http://sysctl.org/cameleon/hosts
 
@@ -251,11 +251,11 @@ iptables -A INPUT -p tcp --dport 80 -j DROP
 
 - https://zeltser.com/malicious-ip-blocklists/
 
-- Дополнительные списки можно скачать от сюда https://firebog.net/
+- Additional lists can be downloaded from `https://firebog.net/`.
 
-- Добавляется через веб интерфейс.
+- They are added via the Pi-hole web interface.
 
-- По итогу мы имеем свой VPN сервер за границей, соответственно и возможность посещать желаемые ресурсы, свой DNS сервер, с шифрованием трафика, а также блокировщик рекламы, что является приятным дополнением. Эффективность блокировки конечно не 100%, но почти вдвое больше чем изначально. Реклама блокируется не только в браузере, но и в приложениях телефона (например Avito).
+- As a result we have our own VPN server abroad (and thus the ability to visit the desired resources), our own DNS server with encrypted traffic, and an ad blocker as a pleasant bonus. Blocking efficiency is not 100%, but almost twice as good as the default. Ads are blocked not only in the browser but also in mobile apps.
 
 ```
 # echo "Installing wireguard"

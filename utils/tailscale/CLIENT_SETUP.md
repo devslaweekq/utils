@@ -1,54 +1,54 @@
-# Подключение устройств к Tailscale VPN
+# Connecting devices to Tailscale VPN
 
-## Пошаговая настройка
+## Step-by-step setup
 
-### 1. Настройка сервера
+### 1. Server setup
 
 ```bash
-# Установка Tailscale на сервер
+# Install Tailscale on the server
 sudo ./install.sh
 
-# Подключение сервера к сети
+# Connect the server to the Tailscale network
 sudo tailscale up
 
-# Настройка как Exit Node
+# Configure as Exit Node
 sudo ./setup-exit-node.sh
 ```
 
-### 2. Активация Exit Node в админ-панели
+### 2. Enable Exit Node in the admin panel
 
-1. Откройте https://login.tailscale.com/admin/machines
-2. Найдите ваш сервер в списке
-3. Нажмите на троеточие рядом с сервером
-4. Выберите "Edit route settings..."
-5. Включите "Use as exit node"
-6. Нажмите "Save"
+1. Open https://login.tailscale.com/admin/machines
+2. Find your server in the list
+3. Click the three dots next to the server
+4. Select "Edit route settings..."
+5. Enable "Use as exit node"
+6. Click "Save"
 
-### 3. Установка на устройства
+### 3. Install on devices
 
 #### Windows
 
-1. Скачайте Tailscale: https://tailscale.com/download/windows
-2. Установите и запустите
-3. Войдите в тот же аккаунт Tailscale
-4. В трее нажмите на иконку Tailscale
-5. Выберите "Use exit node" → ваш сервер
+1. Download Tailscale: https://tailscale.com/download/windows
+2. Install and run it
+3. Sign in with the same Tailscale account
+4. Click the Tailscale icon in the tray
+5. Choose "Use exit node" → your server
 
 #### Android
 
-1. Установите из Google Play: "Tailscale"
-2. Откройте приложение и войдите в аккаунт
-3. После подключения откройте меню (≡)
-4. Нажмите "Use exit node"
-5. Выберите ваш сервер из списка
+1. Install from Google Play: "Tailscale"
+2. Open the app and sign in
+3. After connecting, open the menu (≡)
+4. Tap "Use exit node"
+5. Select your server from the list
 
 #### iPhone/iPad
 
-1. Установите из App Store: "Tailscale"
-2. Откройте приложение и войдите в аккаунт
-3. Нажмите на значок настроек (⚙️)
-4. Выберите "Exit Node"
-5. Выберите ваш сервер
+1. Install from the App Store: "Tailscale"
+2. Open the app and sign in
+3. Tap the settings icon (⚙️)
+4. Choose "Exit Node"
+5. Select your server
 
 #### Linux Desktop
 
@@ -58,68 +58,68 @@ curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | sudo tee
 curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
 sudo apt update && sudo apt install tailscale
 
-# Подключение
+# Connect
 sudo tailscale up
 
-# Использование exit node
-sudo tailscale up --exit-node=ИМЯ_ВАШЕГО_СЕРВЕРА
+# Use exit node
+sudo tailscale up --exit-node=NAME_OF_YOUR_SERVER
 ```
 
 #### macOS
 
-1. Скачайте: https://tailscale.com/download/mac
-2. Установите и запустите
-3. Войдите в аккаунт
-4. В меню Tailscale выберите "Use exit node" → ваш сервер
+1. Download: https://tailscale.com/download/mac
+2. Install and run it
+3. Sign in to your account
+4. In the Tailscale menu choose "Use exit node" → your server
 
-### 4. Проверка подключения
+### 4. Verify connectivity
 
-После настройки на любом устройстве:
+After setup on any device:
 
-1. Проверьте IP адрес:
+1. Check your IP address:
 
-    - Сайт: https://whatismyipaddress.com/
-    - Должен показывать IP вашего сервера
+    - Site: https://whatismyipaddress.com/
+    - It should show the IP of your server
 
-2. Проверьте статус Tailscale:
+2. Check Tailscale status:
 
     ```bash
     tailscale status
     ```
 
-3. Проверьте соединение с сервером:
+3. Test connectivity to the server:
     ```bash
-    ping IP_ВАШЕГО_СЕРВЕРА_В_TAILSCALE
+    ping IP_OF_YOUR_SERVER_IN_TAILSCALE
     ```
 
-### 5. Полезные команды
+### 5. Useful commands
 
-#### На сервере:
+#### On the server:
 
 ```bash
-# Статус Exit Node
+# Exit Node status
 tailscale status
 
-# Просмотр подключенных устройств
+# Show connected devices
 tailscale status --peers
 
-# Отключить Exit Node
+# Disable Exit Node
 tailscale up --advertise-exit-node=false
 
-# Перезапустить с Exit Node
+# Restart with Exit Node
 tailscale up --advertise-exit-node --accept-routes
 ```
 
-#### На клиентах:
+#### On clients:
 
 ```bash
-# Подключиться к exit node
-tailscale up --exit-node=ИМЯ_СЕРВЕРА
+# Connect to exit node
+tailscale up --exit-node=SERVER_NAME
 
-# Отключиться от exit node
+# Disconnect from exit node
 tailscale up --exit-node=
 
-# Список доступных exit nodes
+# List available exit nodes
 tailscale exit-node list
 ```
 
