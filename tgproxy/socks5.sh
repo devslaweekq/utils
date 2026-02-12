@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # cd ~
-# curl -o installProxy.sh https://raw.githubusercontent.com/devslaweekq/utils/main/tgproxy/install.sh
-# chmod +x installProxy.sh
-# sudo ./installProxy.sh
+# curl -o socks5.sh https://raw.githubusercontent.com/devslaweekq/utils/main/tgproxy/socks5.sh
+# chmod +x socks5.sh
+# sudo ./socks5.sh
 
 #
 # Installation of a SOCKS5 proxy with authentication (Dante) on Ubuntu.
