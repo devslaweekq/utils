@@ -6,7 +6,7 @@ set -euo pipefail
 # - Creates /root/mtproxy-telemt
 # - Generates docker-compose.yml and telemt.toml
 # - Configures two users with independent random secrets
-# - Binds container port 443 to host port 7443
+# - Binds container port 443 to host port 443 (for HTTPS masking)
 
 TARGET_DIR="/root/mtproxy-telemt"
 
@@ -33,6 +33,15 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
+echo "Checking that host port 443 is free..."
+if ss -tulpn 2>/dev/null | grep -qE 'LISTEN.+:443[[:space:]]'; then
+  echo "Error: host port 443 is already in use."
+  echo "Current listeners on 443:"
+  ss -tulpn 2>/dev/null | grep -E 'LISTEN.+:443[[:space:]]' || true
+  echo "Stop the service that uses port 443 and run this installer again."
+  exit 1
+fi
+
 echo "Generating secrets for users..."
 SECRET_1="$(openssl rand -hex 16)"
 SECRET_2="$(openssl rand -hex 16)"
@@ -55,7 +64,7 @@ services:
     volumes:
       - ./telemt.toml:/etc/telemt.toml:ro
     ports:
-      - "7443:443/tcp"
+      - "443:443/tcp"
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -128,7 +137,7 @@ echo "Users: user1, user2"
 echo "Secrets:"
 echo "  user1: ${SECRET_1}"
 echo "  user2: ${SECRET_2}"
-echo "Host port: 7443 -> container port 443"
+echo "Host port: 443 -> container port 443"
 
 SERVER_IP="$(curl -s https://api.ipify.org || hostname -I | awk '{print $1}')"
 echo
