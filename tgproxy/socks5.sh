@@ -76,17 +76,9 @@ echo "  Interface:      $NET_IFACE"
 echo "  Allowed subnet: $ALLOW_SUBNET"
 echo
 
-###############################################################################
-# Package installation
-###############################################################################
-
 info "Updating packages and installing dante-server..."
 apt update -y
 apt install -y dante-server
-
-###############################################################################
-# Creating a system user for SOCKS authentication
-###############################################################################
 
 if id "$PROXY_USER" >/dev/null 2>&1; then
   warn "User $PROXY_USER already exists, updating password."
@@ -96,10 +88,6 @@ else
 fi
 
 echo "${PROXY_USER}:${PROXY_PASS_1}" | chpasswd
-
-###############################################################################
-# Dante configuration (/etc/danted.conf)
-###############################################################################
 
 info "Writing configuration to /etc/danted.conf..."
 
@@ -132,10 +120,6 @@ socks pass {
 }
 
 EOF
-
-###############################################################################
-# Start and enable service
-###############################################################################
 
 info "Restarting danted service..."
 systemctl restart danted

@@ -26,13 +26,17 @@ sudo mkdir -p /etc/hysteria
 
 # Generate self-signed certificate
 echo "Generating self-signed certificate..."
-if [[ ! -f /etc/hysteria/cert.pem ]] || [[ ! -f /etc/hysteria/key.pem ]]; then
-    sudo openssl ecparam -genkey -name prime256v1 -out /tmp/hysteria-key.pem
+sudo rm -f /etc/hysteria/cert.pem /etc/hysteria/key.pem
+sudo openssl ecparam -genkey -name prime256v1 -out /tmp/hysteria-key.pem 2>/dev/null
+if [[ -f /tmp/hysteria-key.pem ]]; then
     sudo openssl req -new -x509 -days 36500 -key /tmp/hysteria-key.pem -out /etc/hysteria/cert.pem -subj "/CN=localhost"
     sudo mv /tmp/hysteria-key.pem /etc/hysteria/key.pem
-    sudo chmod 600 /etc/hysteria/key.pem
-    sudo chmod 644 /etc/hysteria/cert.pem
+else
+    sudo openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/hysteria/key.pem -out /etc/hysteria/cert.pem -subj "/CN=localhost" -days 36500
 fi
+sudo chmod 644 /etc/hysteria/key.pem
+sudo chmod 644 /etc/hysteria/cert.pem
+sudo chown root:root /etc/hysteria/key.pem /etc/hysteria/cert.pem
 
 echo "Creating configuration file..."
 sudo tee /etc/hysteria/config.yaml > /dev/null <<EOF
@@ -57,20 +61,12 @@ sniff:
 outbounds:
   - name: direct
     type: direct
-  - name: socks5_proxy
-    type: socks5
-    socks5:
-      addr: 127.0.0.1:8088
-      username: user1
-      password: ${PASSWORD1}
 
 masquerade:
   type: proxy
   proxy:
-    url: 1c.ru
+    url: https://1c.ru
     rewriteHost: true
-  listenHTTP: :80
-  listenHTTPS: :443
   forceHTTPS: true
 EOF
 
@@ -79,11 +75,17 @@ echo "Configuring iptables..."
 sudo iptables -t nat -A PREROUTING -i eth0 -p udp --dport 80:10000 -j DNAT --to-destination :443 2>/dev/null || true
 # IPv6
 sudo ip6tables -t nat -A PREROUTING -i eth0 -p udp --dport 80:10000 -j DNAT --to-destination :443 2>/dev/null || true
+# Allow UDP port 443 (insert at the beginning to ensure it's processed first)
+sudo iptables -I INPUT 1 -p udp --dport 443 -j ACCEPT 2>/dev/null || true
+sudo ip6tables -I INPUT 1 -p udp --dport 443 -j ACCEPT 2>/dev/null || true
+# Also allow on any interface
+sudo iptables -I INPUT 1 -p udp -m udp --dport 443 -j ACCEPT 2>/dev/null || true
+sudo ip6tables -I INPUT 1 -p udp -m udp --dport 443 -j ACCEPT 2>/dev/null || true
 
 echo "Getting server IP address..."
 SERVER_IP=""
 for service in "ifconfig.me" "ipinfo.io/ip" "icanhazip.com" "api.ipify.org"; do
-    IP=$(curl -s --max-time 3 "$service" 2>/dev/null | grep -oE '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$' | head -1)
+    IP=$(curl -s --max-time 3 "$service" 2>/dev/null | grep -oE '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$' | head -1 || true)
     if [[ -n "$IP" ]]; then
         SERVER_IP="$IP"
         break
@@ -103,25 +105,30 @@ sudo systemctl restart hysteria-server.service
 sudo systemctl enable hysteria-server.service
 
 sleep 2
-echo "hostname: $(hostname)"
 if sudo systemctl is-active --quiet hysteria-server.service; then
     echo ""
     echo "=========================================="
     echo "Hysteria2 server successfully installed!"
     echo "=========================================="
     echo ""
+    echo "Server status:"
+    sudo ss -ulnp | grep :443 || echo "Warning: Port 443 UDP not listening"
+    echo ""
     echo "Connection links for Streisand:"
     echo ""
     echo "User 1:"
-    echo "hysteria2://user1:${PASSWORD1}@${SERVER_IP}:${PORT}/?insecure=1"
+    echo "hysteria2://user1:${PASSWORD1}@${SERVER_IP}:${PORT}/?insecure=true"
     echo ""
     echo "User 2:"
-    echo "hysteria2://user2:${PASSWORD2}@${SERVER_IP}:${PORT}/?insecure=1"
+    echo "hysteria2://user2:${PASSWORD2}@${SERVER_IP}:${PORT}/?insecure=true"
     echo ""
     echo "=========================================="
+    echo ""
+    echo "To check connections, run:"
+    echo "sudo journalctl -u hysteria-server.service -f"
 else
     echo "Error: service did not start. Check logs:"
-    echo "sudo journalctl -u hysteria-server.service"
+    echo "sudo journalctl -u hysteria-server.service -n 50 --no-pager"
     exit 1
 fi
 
