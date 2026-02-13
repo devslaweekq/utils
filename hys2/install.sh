@@ -23,7 +23,6 @@ PASSWORD1=$(openssl rand -hex 8)
 PASSWORD2=$(openssl rand -hex 8)
 
 sudo mkdir -p /etc/hysteria
-
 echo "Creating configuration file..."
 sudo tee /etc/hysteria/config.yaml > /dev/null <<EOF
 listen: :443
@@ -72,8 +71,21 @@ sudo iptables -t nat -A PREROUTING -i eth0 -p udp --dport 80:10000 -j DNAT --to-
 # IPv6
 sudo ip6tables -t nat -A PREROUTING -i eth0 -p udp --dport 80:10000 -j DNAT --to-destination :443 2>/dev/null || true
 
-# Getting server IP address
-SERVER_IP=$(curl -s ifconfig.me || curl -s ipinfo.io/ip || echo "YOUR_SERVER_IP")
+echo "Getting server IP address..."
+SERVER_IP=""
+for service in "ifconfig.me" "ipinfo.io/ip" "icanhazip.com" "api.ipify.org"; do
+    IP=$(curl -s --max-time 3 "$service" 2>/dev/null | grep -oE '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$' | head -1)
+    if [[ -n "$IP" ]]; then
+        SERVER_IP="$IP"
+        break
+    fi
+done
+
+if [[ -z "$SERVER_IP" ]]; then
+    echo "Warning: failed to automatically determine IP address"
+    SERVER_IP="YOUR_SERVER_IP"
+fi
+
 PORT=443
 
 echo "Starting service..."
@@ -82,6 +94,7 @@ sudo systemctl restart hysteria-server.service
 sudo systemctl enable hysteria-server.service
 
 sleep 2
+echo "hostname: $(hostname)"
 if sudo systemctl is-active --quiet hysteria-server.service; then
     echo ""
     echo "=========================================="
@@ -97,6 +110,7 @@ if sudo systemctl is-active --quiet hysteria-server.service; then
     echo "hysteria2://user2:${PASSWORD2}@${SERVER_IP}:${PORT}/"
     echo ""
     echo "=========================================="
+    exit 0
 else
     echo "Error: service did not start. Check logs:"
     echo "sudo journalctl -u hysteria-server.service"
