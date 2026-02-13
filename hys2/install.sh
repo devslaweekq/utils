@@ -18,20 +18,29 @@ set -euo pipefail
 echo "Installing Hysteria2..."
 bash <(curl -fsSL https://get.hy2.sh/)
 
-# Generating passwords (16 hex characters)
+# Generate passwords (16 hex characters)
 PASSWORD1=$(openssl rand -hex 8)
 PASSWORD2=$(openssl rand -hex 8)
 
 sudo mkdir -p /etc/hysteria
+
+# Generate self-signed certificate
+echo "Generating self-signed certificate..."
+if [[ ! -f /etc/hysteria/cert.pem ]] || [[ ! -f /etc/hysteria/key.pem ]]; then
+    sudo openssl ecparam -genkey -name prime256v1 -out /tmp/hysteria-key.pem
+    sudo openssl req -new -x509 -days 36500 -key /tmp/hysteria-key.pem -out /etc/hysteria/cert.pem -subj "/CN=localhost"
+    sudo mv /tmp/hysteria-key.pem /etc/hysteria/key.pem
+    sudo chmod 600 /etc/hysteria/key.pem
+    sudo chmod 644 /etc/hysteria/cert.pem
+fi
+
 echo "Creating configuration file..."
 sudo tee /etc/hysteria/config.yaml > /dev/null <<EOF
 listen: :443
 
-acme:
-  domains:
-    - $(hostname)
-  email: admin@$(hostname)
-  ca: letsencrypt
+tls:
+  cert: /etc/hysteria/cert.pem
+  key: /etc/hysteria/key.pem
 
 auth:
   type: userpass
@@ -104,13 +113,12 @@ if sudo systemctl is-active --quiet hysteria-server.service; then
     echo "Connection links for Streisand:"
     echo ""
     echo "User 1:"
-    echo "hysteria2://user1:${PASSWORD1}@${SERVER_IP}:${PORT}/"
+    echo "hysteria2://user1:${PASSWORD1}@${SERVER_IP}:${PORT}/?insecure=1"
     echo ""
     echo "User 2:"
-    echo "hysteria2://user2:${PASSWORD2}@${SERVER_IP}:${PORT}/"
+    echo "hysteria2://user2:${PASSWORD2}@${SERVER_IP}:${PORT}/?insecure=1"
     echo ""
     echo "=========================================="
-    exit 0
 else
     echo "Error: service did not start. Check logs:"
     echo "sudo journalctl -u hysteria-server.service"
