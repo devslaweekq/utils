@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# cd ~
+# curl -o hys2_install.sh https://raw.githubusercontent.com/devslaweekq/utils/main/hys2/install.sh
+# chmod +x hys2_install.sh
+# sudo ./hys2_install.sh
+
 # https://habr.com/ru/articles/776402/
 # https://v2.hysteria.network/docs/getting-started/Server-Installation-Script/
 # https://v2.hysteria.network/docs/advanced/Full-Server-Config/
