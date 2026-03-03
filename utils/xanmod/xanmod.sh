@@ -57,8 +57,7 @@ sudo sysctl vm.vfs_cache_pressure=50
 cat /proc/sys/fs/inotify/max_user_watches
 sudo sysctl fs.inotify.max_user_watches=524288
 sudo tee -a /etc/sysctl.conf <<< \
-"
-vm.swappiness=10
+"vm.swappiness=10
 vm.vfs_cache_pressure=50
 fs.inotify.max_user_watches=524288"
 
