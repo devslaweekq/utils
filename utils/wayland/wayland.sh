@@ -90,6 +90,7 @@ echo "Applying settings for current session..."
 
 # Main experimental Mutter features
 gsettings set org.gnome.mutter experimental-features "['scale-monitor-framebuffer', 'rt-scheduler']"
+# Experimental features: ['scale-monitor-framebuffer', 'xwayland-native-scaling']
 
 # Font optimization for high‑DPI displays
 gsettings set org.gnome.desktop.interface font-antialiasing 'rgba'

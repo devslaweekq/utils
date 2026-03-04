@@ -16,10 +16,10 @@ sudo apt install -y \
   libnss3-dev libssl-dev libreadline-dev
 
 . ~/.bashrc
-python3 --version
-pip3 --version
 python3 -m pip config set global.break-system-packages true
 pip install pipenv
 pip3 install --upgrade pip
+python3 --version
+pip3 --version
 echo '#### Python3 installed'
 echo '#################################################################'

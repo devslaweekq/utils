@@ -25,7 +25,7 @@ echo "Current kernel version:"
 cat /proc/version
 
 echo "deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org $(lsb_release -sc) main non-free" | sudo tee /etc/apt/sources.list.d/xanmod-release.list
-sudo apt update && sudo apt install nvidia-driver-580
+sudo apt update && sudo apt install nvidia-driver-580-open
 
 # echo "🔹 Configuring swap (32GB)..."
 # lsblk -f

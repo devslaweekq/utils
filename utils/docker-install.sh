@@ -7,7 +7,7 @@ echo '#################################################################'
 if command -v docker &> /dev/null && docker --version &> /dev/null && docker compose version &> /dev/null; then
     echo 'Docker and Docker Compose are already installed. Continuing...'
     docker --version
-    docker-compose --version
+    docker-compose version
 
     # Ensure current user is in docker group
     if groups "$USER" | grep -q "docker"; then

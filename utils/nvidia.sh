@@ -28,8 +28,8 @@ sudo add-apt-repository -y ppa:graphics-drivers/ppa
 sudo dpkg --add-architecture i386
 sudo apt update
 sudo apt full-upgrade -y
-sudo apt install --reinstall -y xserver-xorg-video-all xserver-xorg-video-nouveau \
-  xserver-xorg-video-intel xserver-xorg-video-nvidia-580
+# sudo apt install --reinstall -y xserver-xorg-video-all xserver-xorg-video-nouveau \
+#  xserver-xorg-video-intel xserver-xorg-video-nvidia-580
 sudo apt-key del 7fa2af80
 # install drivers NVIDIA
 sudo apt install -y nvidia-driver-580-open nvidia-kernel-source-580-open \
@@ -43,11 +43,11 @@ sudo apt install -y \
   vkbasalt libglu1-mesa-dev:{i386,amd64} freeglut3-dev mesa-common-dev \
   libopenal1 libopenal-dev libalut0 libalut-dev
 
-sudo prime-select on-demand # nvidia|intel|on-demand|query
-sudo nvidia-xconfig --prime
-sh -c "xrandr --setprovideroutputsource modesetting NVIDIA-0; xrandr --auto"
-sudo bash -c "echo blacklist nouveau >> /etc/modprobe.d/blacklist-nvidia-nouveau.conf"
-sudo bash -c "echo options nouveau modeset=0 >> /etc/modprobe.d/blacklist-nvidia-nouveau.conf"
+# sudo prime-select on-demand # nvidia|intel|on-demand|query
+# sudo nvidia-xconfig --prime
+# sh -c "xrandr --setprovideroutputsource modesetting NVIDIA-0; xrandr --auto"
+# sudo bash -c "echo blacklist nouveau >> /etc/modprobe.d/blacklist-nvidia-nouveau.conf"
+# sudo bash -c "echo options nouveau modeset=0 >> /etc/modprobe.d/blacklist-nvidia-nouveau.conf"
 
 sudo systemctl daemon-reload
 sudo update-initramfs -u

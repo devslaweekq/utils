@@ -56,7 +56,7 @@ else
 fi
 
 echo "🔹 Configuring TLP..."
-sudo cp ./tlp.conf /etc/tlp.conf
+sudo cp /mnt/d/CRYPTO/utils/utils/tlp.conf /etc/tlp.conf
 
 sudo systemctl enable --now tlp.service
 sudo systemctl start tlp.service

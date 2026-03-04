@@ -1,3 +1,5 @@
+#!/bin/bash
+
 sudo apt update
 sudo apt install -y pulseaudio-utils pavucontrol \
   pipewire-alsa pipewire-jack pipewire-audio-client-libraries

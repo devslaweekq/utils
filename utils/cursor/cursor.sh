@@ -25,7 +25,7 @@ Types: deb
 URIs: https://downloads.cursor.com/aptrepo
 Suites: stable
 Components: main
-Architectures: amd64,arm64
+Architectures: amd64
 Signed-By: /usr/share/keyrings/anysphere.gpg" >> /etc/apt/sources.list.d/cursor.sources'
 
 sudo apt update
