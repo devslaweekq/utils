@@ -13,35 +13,11 @@ fi
 
 echo "Starting Tailscale installation..."
 
-# Detect distribution
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    DISTRO=$ID
-else
-    echo "Error: Unable to determine Linux distribution"
-    exit 1
-fi
-
-echo "Detected distribution: $DISTRO"
 
 # Update packages and install dependencies
 echo "Updating packages..."
-case $DISTRO in
-    ubuntu|debian)
-        sudo apt update -qq
-        sudo apt install -y curl wget gnupg lsb-release apt-transport-https ca-certificates
-        ;;
-    centos|rhel|fedora|rocky|almalinux)
-        if command -v dnf &> /dev/null; then
-            sudo dnf install -y curl wget gnupg
-        else
-            sudo yum install -y curl wget gnupg
-        fi
-        ;;
-    *)
-        echo "Warning: Unknown distribution"
-        ;;
-esac
+sudo apt update -qq
+sudo apt install -y curl wget gnupg lsb-release apt-transport-https ca-certificates
 
 # Install Tailscale
 echo "Installing Tailscale..."
@@ -82,6 +58,35 @@ if command -v iptables &> /dev/null; then
     fi
     echo "iptables rule added for port 41641/udp"
 fi
+
+# Enable IP forwarding
+echo "Enabling IP forwarding..."
+echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
+echo 'net.ipv6.conf.all.forwarding = 1' >> /etc/sysctl.conf
+sysctl -p
+
+# Configure iptables for NAT
+echo "Configuring NAT..."
+
+# Detect primary interface
+PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
+echo "Primary interface: $PRIMARY_INTERFACE"
+
+# Add NAT rules
+iptables -t nat -A POSTROUTING -o $PRIMARY_INTERFACE -j MASQUERADE
+iptables -A FORWARD -i tailscale0 -o $PRIMARY_INTERFACE -j ACCEPT
+iptables -A FORWARD -i $PRIMARY_INTERFACE -o tailscale0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# Save iptables rules
+if command -v netfilter-persistent &> /dev/null; then
+    netfilter-persistent save
+elif command -v iptables-save &> /dev/null; then
+    iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
+fi
+
+echo "iptables rules configured"
+
+
 echo ""
 echo "Tailscale installation completed!"
 echo ""

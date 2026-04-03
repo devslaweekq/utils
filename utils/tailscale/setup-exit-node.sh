@@ -21,48 +21,24 @@ if ! command -v tailscale &> /dev/null; then
     exit 1
 fi
 
-# Enable IP forwarding
-echo "Enabling IP forwarding..."
-echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
-echo 'net.ipv6.conf.all.forwarding = 1' >> /etc/sysctl.conf
-sysctl -p
-
-# Configure iptables for NAT
-echo "Configuring NAT..."
-
-# Detect primary interface
-PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
-echo "Primary interface: $PRIMARY_INTERFACE"
-
-# Add NAT rules
-iptables -t nat -A POSTROUTING -o $PRIMARY_INTERFACE -j MASQUERADE
-iptables -A FORWARD -i tailscale0 -o $PRIMARY_INTERFACE -j ACCEPT
-iptables -A FORWARD -i $PRIMARY_INTERFACE -o tailscale0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-
-# Save iptables rules
-if command -v netfilter-persistent &> /dev/null; then
-    netfilter-persistent save
-elif command -v iptables-save &> /dev/null; then
-    iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
-fi
-
-echo "iptables rules configured"
-
-# Start Tailscale as Exit Node
-echo "Starting Tailscale as Exit Node..."
-tailscale up --advertise-exit-node --accept-routes
-
 echo ""
 echo "====================================="
 echo "Exit Node configured!"
 echo "====================================="
 echo ""
 echo "Next steps:"
-echo "1. Open the admin panel: https://login.tailscale.com/admin/machines"
-echo "2. Find your server in the devices list"
-echo "3. Enable the 'Exit node' option for this device"
-echo "4. Connect other devices to Tailscale"
-echo "5. On clients, choose your server as the Exit Node"
+echo "1. Open the settings: https://login.tailscale.com/admin/settings"
+echo "2. Add your auth key: https://login.tailscale.com/admin/settings/auth-keys"
+echo "3. Copy the auth key and paste it into the script "
+echo "4. Run the command: sudo tailscale up --auth-key=YOUR_AUTH_KEY --advertise-exit-node --accept-routes=true --accept-dns=false"
+echo "5. Open the admin panel: https://login.tailscale.com/admin/machines"
+echo "6. Find your server in the devices list"
+echo "7. Enable the 'Exit node' option for this device"
+echo "8. Connect other devices to Tailscale"
+echo "9. On clients, choose your server as the Exit Node"
+echo "10. After installing, open https://login.tailscale.com/admin/acls/file"
+echo "11. Copy the content of the settings.json and paste it into the 'ACLs' field"
+echo "12. Click 'Save'"
 echo ""
 echo "Status: $(tailscale status --peers=false)"
 echo ""
