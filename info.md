@@ -1,5 +1,7 @@
 ### then on my local pc init ssh key
+
 If no ssh keys
+
 ```
 sudo ufw allow ssh
 cd ~
@@ -13,7 +15,9 @@ cd -
 eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519
 ssh-copy-id -i ~/.ssh/id_ed25519.pub msi@64.227.69.234 pswd user->enter
 ```
+
 ### after connect to droplet
+
 `ssh 64.227.69.234`
 
 ### check adding keys
@@ -23,6 +27,7 @@ sudo nano ~/.ssh/authorized_keys
 // edit config
 sudo nano /etc/ssh/sshd_config
 ```
+
 ```
 # PermitRootLogin no
 # PubkeyAuthentication yes
@@ -50,8 +55,8 @@ sudo npm i -g pm2@latest nodemon serve
 nvm ls
 ```
 
-
 ### npm service
+
 ```
 # sudo npm i
 # sudo pm2 start bot.js
@@ -67,10 +72,6 @@ nvm ls
 # sudo pm2 info app_name
 # sudo pm2 monit
 ```
-
-
-
-
 
 ### https://habr.com/ru/articles/594877/
 
@@ -95,7 +96,6 @@ sudo iptables -A INPUT -s 10.20.20.0/24 -p tcp -m tcp --dport 53 -m conntrack --
 sudo iptables -A INPUT -s 10.20.20.0/24 -p udp -m udp --dport 53 -m conntrack --ctstate NEW -j A
 ```
 
-
 ### Replace the virtual IP addresses `10.20.20.0/24` with the subnet of your WireGuard network.
 
 ### To persist the routes, install and configure iptables-persistent
@@ -110,26 +110,28 @@ sudo systemctl enable netfilter-persistent
 sudo netfilter-persistent save
 ```
 
-
 ### Install Pi-hole to block ads.
+
 ```
 sudo curl -sSL https://install.pi-hole.net | bash
 ```
 
 #### After the installer starts, choose the virtual interface of your WireGuard (`wg0`). Then press Enter and at the end save the password for the program web interface.
 
-
-
-
 # 5. Proceed to installation and configuration of your own DNS server.
 
 # Install Unbound DNS:
+
 sudo apt install -y unbound unbound-host -y
+
 # Download DNS root hints:
+
 curl -o /var/lib/unbound/root.hints https://www.internic.net/domain/named.cache
+
 # Create config `/etc/unbound/unbound.conf.d/pi-hole.conf`
 
 nano /etc/unbound/unbound.conf.d/pi-hole.conf
+
 # Copy this configuration there:
 
 ```
@@ -211,20 +213,24 @@ dig sigfail.verteiltesysteme.net @127.0.0.1 -p 5353
 
 dig sigok.verteiltesysteme.net @127.0.0.1 -p 5353
 
-- In the first and third case the status should be `NOERROR`, and in the second case `SERVFAIL`. If the output matches this, everything is working correctly.
+- In the first and third case the status should be `NOERROR`, and in the second case `SERVFAIL`. If the output matches this, everything is
+  working correctly.
 
-- Next open the Pi-hole web interface in a browser. The address will be the same as the VPS server address plus `/admin` (for example `http://185.18.55.137/admin`). Go to the settings tab and configure it as on your reference screenshot.
+- Next open the Pi-hole web interface in a browser. The address will be the same as the VPS server address plus `/admin` (for example
+  `http://185.18.55.137/admin`). Go to the settings tab and configure it as on your reference screenshot.
 
 - At the bottom you can also enable the `Use DNSSEC` checkbox and save.
 
-- It is a good idea to restrict access to the Pi-hole web interface so it cannot be brute-forced. We will allow access only from the internal subnet:
+- It is a good idea to restrict access to the Pi-hole web interface so it cannot be brute-forced. We will allow access only from the
+  internal subnet:
 
 iptables -A INPUT -s 10.55.55.0/24 -p tcp --dport 80 -j ACCEPT
 
 iptables -A INPUT -p tcp --dport 80 -j DROP
+
 - Also remember to replace `10.55.55.0/24` with your own virtual network here.
 
-- 6. To test all configured services, open these links:
+-   6. To test all configured services, open these links:
 
 - DNS leak test `https://dnsleak.com/`
 - and `https://www.dnsleaktest.com/` — the DNS server address there should match the public IP address of your VPS server.
@@ -255,7 +261,9 @@ iptables -A INPUT -p tcp --dport 80 -j DROP
 
 - They are added via the Pi-hole web interface.
 
-- As a result we have our own VPN server abroad (and thus the ability to visit the desired resources), our own DNS server with encrypted traffic, and an ad blocker as a pleasant bonus. Blocking efficiency is not 100%, but almost twice as good as the default. Ads are blocked not only in the browser but also in mobile apps.
+- As a result we have our own VPN server abroad (and thus the ability to visit the desired resources), our own DNS server with encrypted
+  traffic, and an ad blocker as a pleasant bonus. Blocking efficiency is not 100%, but almost twice as good as the default. Ads are blocked
+  not only in the browser but also in mobile apps.
 
 ```
 # echo "Installing wireguard"
@@ -267,14 +275,4 @@ iptables -A INPUT -p tcp --dport 80 -j DROP
 # sudo ./wireguard-install.sh
 
 # ssh-keygen -f "/home/msi/.ssh/known_hosts" -R "178.128.17.181"
-
-# curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | \
-#   sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-# curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | \
-#   sudo tee /etc/apt/sources.list.d/tailscale.list
-# sudo apt update
-# sudo apt install -y tailscale
-# sudo tailscale up
-# tailscale ip -4
-# 2C-4D-54-E9-02-BD
 ```
