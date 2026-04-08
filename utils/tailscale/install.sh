@@ -86,6 +86,12 @@ fi
 
 echo "iptables rules configured"
 
+tailscale configure systray --enable-startup=systemd
+tailscale set --operator=$USER
+systemctl --user daemon-reload
+sudo systemctl restart systemd-resolved
+sudo systemctl restart NetworkManager
+sudo systemctl restart tailscaled
 
 echo ""
 echo "Tailscale installation completed!"
