@@ -16,7 +16,7 @@ sudo apt install -y \
   linux-headers-$(uname -r) clang gcc make acpid build-essential \
   ca-certificates dirmngr software-properties-common apt-transport-https \
   curl dkms libglvnd0 libc-dev freeglut3-dev pkg-config libglvnd-dev \
-  libegl-dev libegl1 libgl-dev libgl1 libx11-dev libxmu-dev libxi-dev \
+  libegl-dev libegl1 libgl-dev libgl1 libxmu-dev libxi-dev \
   libglu1-mesa-dev libfreeimage-dev libglfw3-dev libgles-dev libgles1 \
   libglvnd-core-dev libglx-dev libopengl-dev
 
@@ -29,11 +29,11 @@ sudo dpkg --add-architecture i386
 sudo apt update
 sudo apt full-upgrade -y
 # sudo apt install --reinstall -y xserver-xorg-video-all xserver-xorg-video-nouveau \
-#  xserver-xorg-video-intel xserver-xorg-video-nvidia-580
+#  xserver-xorg-video-intel xserver-xorg-video-nvidia-595
 sudo apt-key del 7fa2af80
 # install drivers NVIDIA
-sudo apt install -y nvidia-driver-580-open nvidia-kernel-source-580-open \
-  nvidia-headless-580-open nvidia-dkms-580-open nvidia-utils-580
+sudo apt install --reinstall -y nvidia-driver-595-open nvidia-kernel-source-595-open \
+  nvidia-headless-595-open nvidia-dkms-595-open nvidia-utils-595
 sudo apt install -y nvidia-settings nvidia-prime \
   libnvidia-egl-wayland1 # nvidia-vulkan-icd nvidia-driver-libs
 

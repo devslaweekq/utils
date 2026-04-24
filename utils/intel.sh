@@ -20,17 +20,19 @@ sudo apt install -y \
 
 # Install the compute-related packages
 sudo apt install -y libigdgmm12
-sudo apt install -y libze1 intel-level-zero-gpu intel-opencl-icd clinfo
+sudo apt install -y libze1 util-linux-extra intel-opencl-icd clinfo
+sudo apt install -y intel-level-zero-gpu
 sudo apt install -y libze-dev intel-ocloc
 
 clinfo | grep "Device Name"
 sudo gpasswd -a ${USER} render
 newgrp render
 
-sudo apt install -y qemu-kvm qemu-utils \
+sudo apt install -y  qemu-utils \
   libvirt-daemon-system libvirt-clients \
   bridge-utils \
   virt-manager ovmf gir1.2-spiceclientgtk-3.0
+  # qemu-kvm
 
 sudo apt install -y \
    libmfxgen1 libvpl2 va-driver-all vainfo \

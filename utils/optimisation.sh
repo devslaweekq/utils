@@ -71,7 +71,7 @@ echo "🔹 You can check battery status with: sudo tlp-stat -b"
 echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
 sudo systemctl restart cpufrequtils
 
-Install GameMode
+# Install GameMode
 echo "🔹 Installing GameMode..."
 if ! command_exists gamemoded; then
     GAMEMODE_PATH="/tmp/gamemode"
