@@ -11,6 +11,7 @@ if ! dpkg -l | grep -q "linux-xanmod"; then
     sudo apt update
     # sudo apt install --reinstall -y linux-xanmod-x64v3
     sudo apt install --reinstall -y linux-xanmod-lts-x64v3
+    sudo apt install --no-install-recommends dkms libelf-dev clang lld llvm
     sudo update-initramfs -u
     sudo update-grub2
     sudo update-grub
@@ -24,8 +25,9 @@ sudo apt install --fix-broken -y
 echo "Current kernel version:"
 cat /proc/version
 
-echo "deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org $(lsb_release -sc) main non-free" | sudo tee /etc/apt/sources.list.d/xanmod-release.list
-sudo apt update && sudo apt install nvidia-driver-580-open
+sudo apt update
+sudo apt install -y nvidia-driver-580-open
+sudo apt install -y libnvidia-gl-580 nvidia-dkms-580-open
 
 # echo "🔹 Configuring swap (32GB)..."
 # lsblk -f
