@@ -42,6 +42,7 @@ sudo apt install -y \
   libvulkan1:{i386,amd64} mesa-vulkan-drivers:{i386,amd64} libgl1-mesa-dri:{i386,amd64} \
   vkbasalt libglu1-mesa-dev:{i386,amd64} freeglut3-dev mesa-common-dev \
   libopenal1 libopenal-dev libalut0 libalut-dev
+  # libdisplay-info2:{i386,amd64}
 
 # sudo prime-select on-demand # nvidia|intel|on-demand|query
 # sudo nvidia-xconfig --prime

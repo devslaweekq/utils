@@ -22,27 +22,31 @@ find_microphone_id() {
         return 0
     fi
 
-    # 2. Get the default source and search for its ID in wpctl
-    local default_source=$(pactl info 2>/dev/null | grep "Default Source:" | cut -d' ' -f3)
+    # 2. Prefer PipeWire's own default source (starred entry in wpctl Sources:)
+    # This is more reliable than trying to match pactl's "Default Source" name to wpctl node names.
+    mic_id=$(
+        wpctl status 2>/dev/null |
+            awk '
+                BEGIN { in_sources=0 }
+                /Sources:/ { in_sources=1; next }
+                in_sources && /^[A-Za-z]/ { in_sources=0 }
+                # wpctl prints a tree, so lines may look like: "│  *   60. Name..."
+                in_sources && $0 ~ /\*\s+[0-9]+\./ {
+                    if (match($0, /\*\s+([0-9]+)\./, m)) { print m[1]; exit }
+                }
+            '
+    )
 
-    if [ ! -z "$default_source" ]; then
-        # First search in Filters (for Bluetooth devices) — device with asterisk
-        mic_id=$(wpctl status 2>/dev/null | grep "*" | grep "$default_source" | head -1 | grep -oE '[0-9]+\.' | head -1 | sed 's/\.//')
-
-        if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
-            local mic_name=$(wpctl status 2>/dev/null | grep -E "^\s+\*\s+$mic_id\." | sed 's/.*\. //' | head -1)
-            echo "$mic_id|${mic_name:-$default_source}"
-            return 0
-        fi
-
-        # Then search in Sources
-        mic_id=$(wpctl status 2>/dev/null | grep -A 50 "Sources:" | grep -E "^\s+[0-9]+\." | grep -F "$default_source" | head -1 | awk '{print $1}' | sed 's/[^0-9]//g')
-
-        if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
-            local mic_name=$(wpctl status 2>/dev/null | grep -E "^\s+$mic_id\." | sed 's/.*\. //' | head -1)
-            echo "$mic_id|${mic_name:-$default_source}"
-            return 0
-        fi
+    if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
+        local mic_name=$(
+            wpctl status 2>/dev/null |
+                awk -v id="$mic_id" '
+                    $1 == id"." { sub(/^[0-9]+\.\s+/, "", $0); print $0; exit }
+                    $1 == "*" && $2 == id"." { $1=""; $2=""; sub(/^\s+/, "", $0); print $0; exit }
+                '
+        )
+        echo "$mic_id|${mic_name:-default}"
+        return 0
     fi
 
     echo "|"
@@ -70,12 +74,19 @@ fix_input_level() {
         echo "✓ Microphone unmuted"
     else
         echo "⚠️  Microphone not found by ID, falling back to generic settings"
+        # PipeWire supports these aliases even when numeric IDs change.
+        wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 1.0 2>/dev/null || true
+        wpctl set-mute @DEFAULT_AUDIO_SOURCE@ 0 2>/dev/null || true
     fi
 
-    # Also via pactl (works with any microphone including Bluetooth)
-    pactl set-source-volume @DEFAULT_SOURCE@ 100% 2>/dev/null
-    pactl set-source-mute @DEFAULT_SOURCE@ 0 2>/dev/null
-    echo "✓ Level set via PulseAudio"
+    # Also via pactl (works with any microphone including Bluetooth) if installed
+    if command -v pactl >/dev/null 2>&1; then
+        pactl set-source-volume @DEFAULT_SOURCE@ 100% 2>/dev/null || true
+        pactl set-source-mute @DEFAULT_SOURCE@ 0 2>/dev/null || true
+        echo "✓ Level set via PulseAudio"
+    else
+        echo "⚠️  pactl not installed; skipping PulseAudio-level commands"
+    fi
 
     # Via ALSA for reliability (only for ALSA devices)
     amixer -c 1 sset "Capture" 100% 2>/dev/null || echo "⚠️  ALSA control not available (normal for Bluetooth)"
@@ -105,27 +116,29 @@ find_microphone_id() {
         return 0
     fi
 
-    # 2. Get the default source and search for its ID in wpctl
-    local default_source=$(pactl info 2>/dev/null | grep "Default Source:" | cut -d' ' -f3)
+    # 2. Prefer PipeWire's own default source (starred entry in wpctl Sources:)
+    mic_id=$(
+        wpctl status 2>/dev/null |
+            awk '
+                BEGIN { in_sources=0 }
+                /Sources:/ { in_sources=1; next }
+                in_sources && /^[A-Za-z]/ { in_sources=0 }
+                in_sources && $0 ~ /\*\s+[0-9]+\./ {
+                    if (match($0, /\*\s+([0-9]+)\./, m)) { print m[1]; exit }
+                }
+            '
+    )
 
-    if [ ! -z "$default_source" ]; then
-        # First search in Filters (for Bluetooth devices) — device with asterisk
-        mic_id=$(wpctl status 2>/dev/null | grep "*" | grep "$default_source" | head -1 | grep -oE '[0-9]+\.' | head -1 | sed 's/\.//')
-
-        if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
-            local mic_name=$(wpctl status 2>/dev/null | grep -E "^\s+\*\s+$mic_id\." | sed 's/.*\. //' | head -1)
-            echo "$mic_id|${mic_name:-$default_source}"
-            return 0
-        fi
-
-        # Then search in Sources
-        mic_id=$(wpctl status 2>/dev/null | grep -A 50 "Sources:" | grep -E "^\s+[0-9]+\." | grep -F "$default_source" | head -1 | awk '{print $1}' | sed 's/[^0-9]//g')
-
-        if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
-            local mic_name=$(wpctl status 2>/dev/null | grep -E "^\s+$mic_id\." | sed 's/.*\. //' | head -1)
-            echo "$mic_id|${mic_name:-$default_source}"
-            return 0
-        fi
+    if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
+        local mic_name=$(
+            wpctl status 2>/dev/null |
+                awk -v id="$mic_id" '
+                    $1 == id"." { sub(/^[0-9]+\.\s+/, "", $0); print $0; exit }
+                    $1 == "*" && $2 == id"." { $1=""; $2=""; sub(/^\s+/, "", $0); print $0; exit }
+                '
+        )
+        echo "$mic_id|${mic_name:-default}"
+        return 0
     fi
 
     echo "|"

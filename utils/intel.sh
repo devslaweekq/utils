@@ -28,7 +28,7 @@ clinfo | grep "Device Name"
 sudo gpasswd -a ${USER} render
 newgrp render
 
-sudo apt install -y  qemu-utils \
+sudo apt install -y qemu-utils \
   libvirt-daemon-system libvirt-clients \
   bridge-utils \
   virt-manager ovmf gir1.2-spiceclientgtk-3.0
