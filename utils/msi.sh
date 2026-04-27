@@ -31,7 +31,7 @@ fi
 # sudo apt update
 # sudo apt install -y qt6-base-dev qt6-declarative-dev qt6-tools-dev
 
-# sudo cp /mnt/D/CRYPTO/utils/utils/qt-online.run /tmp/qt-online.run
+# sudo cp /mnt/d/CRYPTO/utils/utils/qt-online.run /tmp/qt-online.run
 # cd /tmp
 # chmod +x ./qt-online.run
 # ./qt-online.run
