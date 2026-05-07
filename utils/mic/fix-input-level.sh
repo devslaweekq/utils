@@ -5,6 +5,8 @@
 
 set -e
 
+sudo apt install pulseaudio-utils
+
 echo "================================================================="
 echo "Solution for the automatic microphone input level change problem"
 echo "================================================================="
@@ -22,30 +24,36 @@ find_microphone_id() {
         return 0
     fi
 
-    # 2. Prefer PipeWire's own default source (starred entry in wpctl Sources:)
-    # This is more reliable than trying to match pactl's "Default Source" name to wpctl node names.
-    mic_id=$(
-        wpctl status 2>/dev/null |
-            awk '
-                BEGIN { in_sources=0 }
-                /Sources:/ { in_sources=1; next }
-                in_sources && /^[A-Za-z]/ { in_sources=0 }
-                # wpctl prints a tree, so lines may look like: "│  *   60. Name..."
-                in_sources && $0 ~ /\*\s+[0-9]+\./ {
-                    if (match($0, /\*\s+([0-9]+)\./, m)) { print m[1]; exit }
-                }
-            '
-    )
+    # 2. use PulseAudio default source name (if pactl exists) and try to match it in wpctl output
+    local default_source=$(pactl info 2>/dev/null | grep "Default Source:" | cut -d' ' -f3)
+
+    if [ ! -z "$default_source" ]; then
+        # First search in Filters (for Bluetooth devices) — device with asterisk
+        mic_id=$(wpctl status 2>/dev/null | grep "*" | grep "$default_source" | head -1 | grep -oE '[0-9]+\.' | head -1 | sed 's/\.//')
+
+        if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
+            local mic_name=$(wpctl status 2>/dev/null | grep -E "^\s+\*\s+$mic_id\." | sed 's/.*\. //' | head -1)
+            echo "$mic_id|${mic_name:-$default_source}"
+            return 0
+        fi
+
+        # Then search in Sources
+        mic_id=$(wpctl status 2>/dev/null | grep -A 50 "Sources:" | grep -E "^\s+[0-9]+\." | grep -F "$default_source" | head -1 | awk '{print $1}' | sed 's/[^0-9]//g')
+
+        if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
+            local mic_name=$(wpctl status 2>/dev/null | grep -E "^\s+$mic_id\." | sed 's/.*\. //' | head -1)
+            echo "$mic_id|${mic_name:-$default_source}"
+            return 0
+        fi
+    fi
+
+    # 3. Fallback: The most reliable way on PipeWire: inspect the default audio source directly.
+    # Works for built-in mics, jack headset mics, and Bluetooth sources.
+    mic_id=$(wpctl inspect @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | awk -F'[ ,]+' 'NR==1 && $1=="id" {print $2; exit}')
 
     if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
-        local mic_name=$(
-            wpctl status 2>/dev/null |
-                awk -v id="$mic_id" '
-                    $1 == id"." { sub(/^[0-9]+\.\s+/, "", $0); print $0; exit }
-                    $1 == "*" && $2 == id"." { $1=""; $2=""; sub(/^\s+/, "", $0); print $0; exit }
-                '
-        )
-        echo "$mic_id|${mic_name:-default}"
+        local mic_name=$(wpctl inspect @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | awk -F' = ' '$1 ~ /node.description/ {gsub(/"/,"",$2); print $2; exit}')
+        echo "$mic_id|${mic_name:-@DEFAULT_AUDIO_SOURCE@}"
         return 0
     fi
 
@@ -74,12 +82,10 @@ fix_input_level() {
         echo "✓ Microphone unmuted"
     else
         echo "⚠️  Microphone not found by ID, falling back to generic settings"
-        # PipeWire supports these aliases even when numeric IDs change.
-        wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 1.0 2>/dev/null || true
-        wpctl set-mute @DEFAULT_AUDIO_SOURCE@ 0 2>/dev/null || true
     fi
 
-    # Also via pactl (works with any microphone including Bluetooth) if installed
+    # Also via pactl (works with any microphone including Bluetooth)
+    # pactl may be missing on PipeWire-only systems; do not abort the whole script.
     if command -v pactl >/dev/null 2>&1; then
         pactl set-source-volume @DEFAULT_SOURCE@ 100% 2>/dev/null || true
         pactl set-source-mute @DEFAULT_SOURCE@ 0 2>/dev/null || true
@@ -89,7 +95,9 @@ fix_input_level() {
     fi
 
     # Via ALSA for reliability (only for ALSA devices)
-    amixer -c 1 sset "Capture" 100% 2>/dev/null || echo "⚠️  ALSA control not available (normal for Bluetooth)"
+    if command -v amixer >/dev/null 2>&1; then
+        amixer -c 1 sset "Capture" 100% 2>/dev/null || echo "⚠️  ALSA control not available (normal for Bluetooth)"
+    fi
 }
 
 # Create an efficient input level monitor
@@ -116,28 +124,36 @@ find_microphone_id() {
         return 0
     fi
 
-    # 2. Prefer PipeWire's own default source (starred entry in wpctl Sources:)
-    mic_id=$(
-        wpctl status 2>/dev/null |
-            awk '
-                BEGIN { in_sources=0 }
-                /Sources:/ { in_sources=1; next }
-                in_sources && /^[A-Za-z]/ { in_sources=0 }
-                in_sources && $0 ~ /\*\s+[0-9]+\./ {
-                    if (match($0, /\*\s+([0-9]+)\./, m)) { print m[1]; exit }
-                }
-            '
-    )
+    # 2. use PulseAudio default source name (if pactl exists) and try to match it in wpctl output
+    local default_source=$(pactl info 2>/dev/null | grep "Default Source:" | cut -d' ' -f3)
+
+    if [ ! -z "$default_source" ]; then
+        # First search in Filters (for Bluetooth devices) — device with asterisk
+        mic_id=$(wpctl status 2>/dev/null | grep "*" | grep "$default_source" | head -1 | grep -oE '[0-9]+\.' | head -1 | sed 's/\.//')
+
+        if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
+            local mic_name=$(wpctl status 2>/dev/null | grep -E "^\s+\*\s+$mic_id\." | sed 's/.*\. //' | head -1)
+            echo "$mic_id|${mic_name:-$default_source}"
+            return 0
+        fi
+
+        # Then search in Sources
+        mic_id=$(wpctl status 2>/dev/null | grep -A 50 "Sources:" | grep -E "^\s+[0-9]+\." | grep -F "$default_source" | head -1 | awk '{print $1}' | sed 's/[^0-9]//g')
+
+        if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
+            local mic_name=$(wpctl status 2>/dev/null | grep -E "^\s+$mic_id\." | sed 's/.*\. //' | head -1)
+            echo "$mic_id|${mic_name:-$default_source}"
+            return 0
+        fi
+    fi
+
+    # 3. Fallback: The most reliable way on PipeWire: inspect the default audio source directly.
+    # Works for built-in mics, jack headset mics, and Bluetooth sources.
+    mic_id=$(wpctl inspect @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | awk -F'[ ,]+' 'NR==1 && $1=="id" {print $2; exit}')
 
     if [ ! -z "$mic_id" ] && [ "$mic_id" -gt 0 ] 2>/dev/null; then
-        local mic_name=$(
-            wpctl status 2>/dev/null |
-                awk -v id="$mic_id" '
-                    $1 == id"." { sub(/^[0-9]+\.\s+/, "", $0); print $0; exit }
-                    $1 == "*" && $2 == id"." { $1=""; $2=""; sub(/^\s+/, "", $0); print $0; exit }
-                '
-        )
-        echo "$mic_id|${mic_name:-default}"
+        local mic_name=$(wpctl inspect @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | awk -F' = ' '$1 ~ /node.description/ {gsub(/"/,"",$2); print $2; exit}')
+        echo "$mic_id|${mic_name:-@DEFAULT_AUDIO_SOURCE@}"
         return 0
     fi
 
@@ -167,8 +183,8 @@ while true; do
 
                 # Restore level in three ways
                 wpctl set-volume "$MIC_ID" 1.0 2>/dev/null
-                pactl set-source-volume @DEFAULT_SOURCE@ 100% 2>/dev/null
-                amixer -c 1 sset "Capture" 100% 2>/dev/null
+                command -v pactl >/dev/null 2>&1 && pactl set-source-volume @DEFAULT_SOURCE@ 100% 2>/dev/null
+                command -v amixer >/dev/null 2>&1 && amixer -c 1 sset "Capture" 100% 2>/dev/null
 
                 echo "$(date): Level restored to 100%" >> "$LOGFILE"
             fi
@@ -366,6 +382,24 @@ check_status() {
         echo "❌ Microphone not found"
     fi
 
+    echo -e "\n--- Available microphones (PipeWire Sources) ---"
+    wpctl status 2>/dev/null | awk '
+        BEGIN { in_sources=0 }
+        /Sources:/ { in_sources=1; next }
+        in_sources && /Filters:/ { in_sources=0 }
+        in_sources && /Streams:/ { in_sources=0 }
+        in_sources {
+            # Examples:
+            # " │  *   75. Some Mic [vol: 1.00]"
+            # " │      60. Another Mic [vol: 1.00]"
+            if (match($0, /\*\s+([0-9]+)\.\s+(.*)$/, m)) {
+                print "* " m[1] ". " m[2]
+            } else if (match($0, /[[:space:]]([0-9]+)\.\s+(.*)$/, m)) {
+                print "  " m[1] ". " m[2]
+            }
+        }
+    ' || echo "⚠️  Unable to read sources via wpctl"
+
     echo -e "\n--- Monitoring status ---"
     # Check via systemd service
     if systemctl --user is-active mic-level-keeper.service >/dev/null 2>&1; then
@@ -478,6 +512,11 @@ case "${1:-}" in
         check_status
         exit 0
         ;;
+    --delete)
+        echo "Deleting all files..."
+        "$(dirname "$0")/delete.sh"
+        exit 0
+        ;;
     --stop)
         echo "Stopping monitoring..."
         pkill -f mic-level-keeper 2>/dev/null && echo "✓ Process stopped" || echo "Process not found"
@@ -524,6 +563,7 @@ case "${1:-}" in
         echo "  --stop       - Stop monitoring"
         echo "  --restart    - Restart monitoring"
         echo "  --test       - Test level restoration"
+        echo "  --delete     - Delete all files"
         echo "  --help, -h   - Show this help"
         exit 0
         ;;
