@@ -65,7 +65,7 @@ sudo /etc/init.d/tlp restart
 sudo tlp start
 
 echo "🔹 TLP battery charge control configuration complete"
-echo "🔹 Current battery thresholds: Start at 80%, Stop at 90%"
+echo "🔹 Current battery thresholds: Start at 90%, Stop at 100%"
 echo "🔹 You can check battery status with: sudo tlp-stat -b"
 
 echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
