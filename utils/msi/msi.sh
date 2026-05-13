@@ -46,3 +46,12 @@ fi
 
 echo "🔹 Installation completed successfully!"
 echo "🔹 You can now run MControlCenter by typing 'mcontrolcenter' in terminal or finding it in your applications menu."
+
+for f in /etc/apt/sources.list.d/*.sources; do
+  [ -f "$f" ] || continue
+  printf '%s: ' "$(basename "$f")"
+  grep -E '^[[:space:]]*Suites:' "$f" \
+    | sed 's/^[[:space:]]*Suites:[[:space:]]*//' \
+    | tr -d '\r' \
+    | paste -sd ' ' - || echo "(нет Suites)"
+done
