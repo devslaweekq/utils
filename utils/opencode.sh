@@ -4,6 +4,6 @@
 
 curl -fsSL https://opencode.ai/install | bash
 
-wget https://opencode.ai/ru/download/stable/linux-x64-deb -O linux-x64-deb.deb
-sudo apt install -y ./linux-x64-deb.deb
-rm linux-x64-deb.deb
+wget https://opencode.ai/ru/download/stable/linux-x64-deb -O opencode.deb
+sudo apt install -y ./opencode.deb
+rm opencode.deb

@@ -41,6 +41,9 @@ ollama pull qwen3.6:35b
 ollama list
 
 # https://lmstudio.ai/download
+sudo wget https://installers.lmstudio.ai/linux/x64/0.4.12-1/LM-Studio-0.4.12-1-x64.deb -O /tmp/LM-Studio-0.4.12-1-x64.deb
+sudo apt install -y /tmp/LM-Studio-0.4.12-1-x64.deb
+sudo rm -rf /tmp/LM-Studio-0.4.12-1-x64.deb
 # curl -fsSL https://lmstudio.ai/install.sh | bash
 
 # To uninstall:
