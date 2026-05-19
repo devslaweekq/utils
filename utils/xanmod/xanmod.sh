@@ -41,7 +41,7 @@ sudo apt install -y libnvidia-gl-580 nvidia-dkms-580-open
 # SWAP_SIZE=$(sudo du -h /swapfile 2>/dev/null | awk '{print $1}' | tr -d 'G')
 # if [ "$SWAP_SIZE" != "32" ]; then
 #     echo "Creating 32GB swap file..."
-#     sudo dd if=/dev/zero of=/swapfile bs=1M count=32768 oflag=append conv=notrunc
+#     sudo dd if=/dev/zero of=/swapfile count=32768 bs=1MiB oflag=append conv=notrunc
 #     sudo chmod 600 /swapfile
 #     sudo mkswap /swapfile
 # fi
@@ -49,8 +49,20 @@ sudo apt install -y libnvidia-gl-580 nvidia-dkms-580-open
 
 # if ! grep -q "/swapfile" /etc/fstab; then
 #     sudo cp /etc/fstab /etc/fstab.bak
-#     echo "/swapfile swap swap sw 0 0" | sudo tee -a /etc/fstab
+#     echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 # fi
+
+# # https://ubuntuhandbook.org/index.php/2021/08/enable-hibernate-ubuntu-21-10/
+# df -h # root_dir -> resume
+# sudo filefrag -v /swapfile #copy first physical_offset value -> resume_offset
+# sudo gnome-text-editor /etc/default/grub
+# # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash resume=/dev/nvme0n1p2 resume_offset=119285760"
+# sudo update-grub
+
+# sudo tee -a /etc/initramfs-tools/conf.d/resume <<< \
+# "resume=/dev/nvme0n1p2 resume_offset=119285760"
+# sudo update-initramfs -c -k all
+# sudo systemctl hibernate
 
 cat /proc/sys/vm/swappiness
 sudo sysctl vm.swappiness=10
