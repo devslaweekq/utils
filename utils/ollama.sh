@@ -3,7 +3,7 @@
 set -e
 
 sudo apt update
-sudo apt install -y git build-essential curl
+sudo apt install -y jq git build-essential curl libsdl2-dev cmake whisper.cpp
 curl -fsSL https://ollama.com/install.sh | sh
 
 ollama -v
@@ -12,38 +12,30 @@ ollama -v
 sudo useradd -r -s /bin/false -U -m -d /usr/share/ollama ollama
 sudo usermod -a -G ollama $(whoami)
 
-sudo tee -a << EOF > /etc/systemd/system/ollama.service
-[Unit]
-Description=Ollama Service
-After=network-online.target
-
-[Service]
-ExecStart=/usr/bin/ollama serve
-User=ollama
-Group=ollama
-Restart=always
-RestartSec=3
-Environment="PATH=$PATH"
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
 sudo systemctl daemon-reload
 sudo systemctl enable ollama
 sudo systemctl start ollama
-sudo systemctl status ollama
+
+# sudo systemctl status ollama
+curl http://localhost:11434/api/tags | jq .
 
 sudo rmmod nvidia_uvm && sudo modprobe nvidia_uvm
 
-ollama pull qwen3.6:35b
+ollama pull gemma3:4b
+ollama run gemma3:4b "Hello, what can you do?"
+# ollama list
+# ollama pull qwen3.6:35b
 # ollama pull hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:IQ4_XS
-ollama list
+
+# STT (Listen)
+# A: Gemini API https://aistudio.google.com/apikey
+# B: Deepgram https://deepgram.com
 
 # https://lmstudio.ai/download
-sudo wget https://installers.lmstudio.ai/linux/x64/0.4.12-1/LM-Studio-0.4.12-1-x64.deb -O /tmp/LM-Studio-0.4.12-1-x64.deb
-sudo apt install -y /tmp/LM-Studio-0.4.12-1-x64.deb
-sudo rm -rf /tmp/LM-Studio-0.4.12-1-x64.deb
+
+sudo wget https://installers.lmstudio.ai/linux/x64/0.4.13-1/LM-Studio-0.4.13-1-x64.deb -O /tmp/LM_Studio.deb
+sudo apt install -y /tmp/LM_Studio.deb
+sudo rm -rf /tmp/LM_Studio.deb
 # curl -fsSL https://lmstudio.ai/install.sh | bash
 
 # To uninstall:
