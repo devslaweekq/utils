@@ -77,7 +77,6 @@ sudo tailscale up --exit-node=NAME_OF_YOUR_SERVER
 After setup on any device:
 
 1. Check your IP address:
-
     - Site: https://whatismyipaddress.com/
     - It should show the IP of your server
 
@@ -161,18 +160,18 @@ tailscale exit-node list
 
 #### Android:
 
--   В настройках Tailscale включите "Auto-connect"
--   Включите "Always-on VPN" в настройках Android
+- В настройках Tailscale включите "Auto-connect"
+- Включите "Always-on VPN" в настройках Android
 
 #### iOS:
 
--   В настройках Tailscale включите "Auto-connect"
--   Добавьте VPN конфигурацию в настройки iOS
+- В настройках Tailscale включите "Auto-connect"
+- Добавьте VPN конфигурацию в настройки iOS
 
 #### Windows:
 
--   Tailscale автоматически подключается при запуске системы
--   Exit node нужно выбирать вручную после каждого подключения
+- Tailscale автоматически подключается при запуске системы
+- Exit node нужно выбирать вручную после каждого подключения
 
 ### 8. Сравнение производительности
 
@@ -209,10 +208,10 @@ tailscale exit-node list
 
 ### 9. Безопасность
 
--   Tailscale использует WireGuard протокол
--   Трафик зашифрован end-to-end
--   Автоматическая ротация ключей
--   Поддержка ACL (Access Control Lists)
+- Tailscale использует WireGuard протокол
+- Трафик зашифрован end-to-end
+- Автоматическая ротация ключей
+- Поддержка ACL (Access Control Lists)
 
 ### 10. Управление пользователями
 

@@ -21,11 +21,12 @@ curl http://localhost:11434/api/tags | jq .
 
 sudo rmmod nvidia_uvm && sudo modprobe nvidia_uvm
 
-ollama pull gemma3:4b
-ollama run gemma3:4b "Hello, what can you do?"
+ollama pull gemma4:E2B
+ollama run gemma4:E2B "Hello, what can you do?"
 # ollama list
 # ollama pull qwen3.6:35b
 # ollama pull hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:IQ4_XS
+# ollama pull hf.co/HauhauCS/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive:Q4_K_M
 
 # STT (Listen)
 # A: Gemini API https://aistudio.google.com/apikey

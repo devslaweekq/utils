@@ -4,9 +4,9 @@
 
 In Ubuntu with PipeWire the microphone can automatically lower the input level when you:
 
--   Cough
--   Speak loudly
--   Produce sharp/impulsive sounds
+- Cough
+- Speak loudly
+- Produce sharp/impulsive sounds
 
 Result: the "Input Volume" slider moves left and people stop hearing you.
 
@@ -91,14 +91,14 @@ wpctl get-volume 55
 
 ### Main components
 
--   `~/.local/bin/mic-level-keeper` – main monitoring script
--   `~/.config/systemd/user/mic-level-keeper.service` – autostart service
--   `~/.config/wireplumber/main.lua.d/99-disable-input-auto-control.lua` – WirePlumber blocking config
+- `~/.local/bin/mic-level-keeper` – main monitoring script
+- `~/.config/systemd/user/mic-level-keeper.service` – autostart service
+- `~/.config/wireplumber/main.lua.d/99-disable-input-auto-control.lua` – WirePlumber blocking config
 
 ### Logs and state
 
--   `/tmp/mic-level-keeper.log` – monitoring log
--   `~/.local/share/mic-level-keeper.pid` – PID of the process
+- `/tmp/mic-level-keeper.log` – monitoring log
+- `~/.local/share/mic-level-keeper.pid` – PID of the process
 
 ## 🔧 Diagnostics
 
@@ -142,11 +142,11 @@ systemctl --user start mic-level-keeper.service
 
 After setup:
 
--   ✅ The "Input Volume" slider stays in place
--   ✅ When it drops it is automatically restored within 0.2–0.4 seconds
--   ✅ People hear you consistently
--   ✅ Works after system reboot
--   ✅ Does not break other features (echo cancellation, noise reduction)
+- ✅ The "Input Volume" slider stays in place
+- ✅ When it drops it is automatically restored within 0.2–0.4 seconds
+- ✅ People hear you consistently
+- ✅ Works after system reboot
+- ✅ Does not break other features (echo cancellation, noise reduction)
 
 ## 🆘 Support
 
@@ -160,8 +160,8 @@ If you have issues:
 
 ## 📝 Difference from `micro.sh`
 
--   **`micro.sh`** – basic microphone tweaks, does NOT solve the automatic level problem
--   **`fix-input-level.sh`** – full solution for the automatic input level problem
+- **`micro.sh`** – basic microphone tweaks, does NOT solve the automatic level problem
+- **`fix-input-level.sh`** – full solution for the automatic input level problem
 
 **To fix the slider issue, use ONLY `fix-input-level.sh`!**
 
