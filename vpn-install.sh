@@ -57,7 +57,7 @@ bash utils/main/utils/docker-install.sh
 
 # bash utils/main/3proxy/install.sh
 bash utils/main/3x-ui/install.sh
-bash utils/main/outline/install.sh --api-port 37280 --keys-port 58628
+# bash utils/main/outline/install.sh --api-port 37280 --keys-port 58628
 
 
 sudo ufw allow 22/tcp
@@ -79,9 +79,9 @@ sudo ufw allow 3333/tcp
 sudo ufw allow 3333/udp
 
 # outline
-sudo ufw allow 37280/tcp
-sudo ufw allow 58628/tcp
-sudo ufw allow 58628/udp
+# sudo ufw allow 37280/tcp
+# sudo ufw allow 58628/tcp
+# sudo ufw allow 58628/udp
 
 echo '#################################################################'
 echo "After all installs and configs run: sudo reboot now"
