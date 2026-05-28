@@ -372,27 +372,11 @@ echo "[6/7] Enabling NAT for VPN subnet in UFW before.rules"
 BEFORE="/etc/ufw/before.rules"
 NAT_MARKER_BEGIN="# ocserv-nat-begin"
 NAT_MARKER_END="# ocserv-nat-end"
-BEFORE6="/etc/ufw/before6.rules"
-NAT6_MARKER_BEGIN="# ocserv-nat6-begin"
-NAT6_MARKER_END="# ocserv-nat6-end"
 
 validate_ufw_before_rules() {
   # Validate iptables-restore format if possible (iptables-restore --test exists on iptables-nft/legacy).
   if command -v iptables-restore >/dev/null 2>&1; then
     if iptables-restore --test < "${BEFORE}" >/dev/null 2>&1; then
-      return 0
-    fi
-    return 1
-  fi
-  return 0
-}
-
-validate_ufw_before6_rules() {
-  if [[ ! -f "${BEFORE6}" ]]; then
-    return 0
-  fi
-  if command -v ip6tables-restore >/dev/null 2>&1; then
-    if ip6tables-restore --test < "${BEFORE6}" >/dev/null 2>&1; then
       return 0
     fi
     return 1
@@ -436,42 +420,6 @@ ensure_ufw_nat_block() {
     return 1
   fi
   mv "${BEFORE}.tmp" "${BEFORE}"
-}
-
-ensure_ufw_nat6_block() {
-  # Best-effort NAT66 for the IPv6 ULA pool used in ocserv.conf.
-  # Only applies when /etc/ufw/before6.rules exists.
-  if [[ ! -f "${BEFORE6}" ]]; then
-    return 0
-  fi
-  if grep -qF "${NAT6_MARKER_BEGIN}" "${BEFORE6}"; then
-    return 0
-  fi
-  if ! grep -q '\*filter' "${BEFORE6}"; then
-    echo "WARN: could not find '*filter' table header in ${BEFORE6}; skipping IPv6 NAT block" >&2
-    return 0
-  fi
-
-  if ! awk -v subnet="fd10:10:10::/48" -v eif="${EGRESS_IF}" -v mb="${NAT6_MARKER_BEGIN}" -v me="${NAT6_MARKER_END}" '
-    BEGIN {inserted=0}
-    $0 ~ /\\*filter/ && inserted==0 {
-      print ""
-      print mb
-      print "*nat"
-      print ":POSTROUTING ACCEPT [0:0]"
-      print "-A POSTROUTING -s " subnet " -o " eif " -j MASQUERADE"
-      print "COMMIT"
-      print me
-      inserted=1
-    }
-    {print}
-    END { if (inserted==0) exit 2 }
-  ' "${BEFORE6}" > "${BEFORE6}.tmp"; then
-    echo "WARN: failed to update ${BEFORE6} with IPv6 NAT table; skipping" >&2
-    rm -f "${BEFORE6}.tmp" || true
-    return 0
-  fi
-  mv "${BEFORE6}.tmp" "${BEFORE6}"
 }
 
 ensure_ufw_forward_rules() {
@@ -523,7 +471,6 @@ cp -a "${BEFORE}" "${BEFORE_BAK}"
 
 ensure_ufw_nat_block
 ensure_ufw_forward_rules
-ensure_ufw_nat6_block
 
 if ! validate_ufw_before_rules; then
   IPT_ERR="$(iptables-restore --test < "${BEFORE}" 2>&1 || true)"
@@ -553,15 +500,6 @@ if ! validate_ufw_before_rules; then
   fi
   cp -a "${BEFORE_BAK}" "${BEFORE}"
   exit 1
-fi
-
-if ! validate_ufw_before6_rules; then
-  IPT6_ERR="$(ip6tables-restore --test < "${BEFORE6}" 2>&1 || true)"
-  echo "WARN: ${BEFORE6} failed ip6tables-restore validation; keeping previous file" >&2
-  if [[ -n "${IPT6_ERR}" ]]; then
-    echo "ip6tables-restore output:" >&2
-    echo "${IPT6_ERR}" >&2
-  fi
 fi
 
 systemctl restart ufw
