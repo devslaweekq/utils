@@ -2,7 +2,6 @@
 
 echo "Installing Outline"
 echo '#################################################################'
-
 #
 # Copyright 2018 The Outline Authors
 #
@@ -164,7 +163,7 @@ function fetch() {
 function install_docker() {
   (
     # Change umask so that /usr/share/keyrings/docker-archive-keyring.gpg has the right permissions.
-    # See https://github.com/Jigsaw-Code/outline-server/issues/951.
+    # See https://github.com/OutlineFoundation/outline-server/issues/951.
     # We do this in a subprocess so the umask for the calling process is unaffected.
     umask 0022
     fetch https://get.docker.com/ | sh
@@ -380,7 +379,7 @@ function start_watchtower() {
       -v /var/run/docker.sock:/var/run/docker.sock)
   # By itself, local messes up the return code.
   local STDERR_OUTPUT
-  STDERR_OUTPUT="$(docker run -d "${docker_watchtower_flags[@]}" containrrr/watchtower --cleanup --label-enable --scope=outline --tlsverify --interval "${WATCHTOWER_REFRESH_SECONDS}" 2>&1 >/dev/null)" && return
+  STDERR_OUTPUT="$(docker run -d "${docker_watchtower_flags[@]}" nickfedor/watchtower --cleanup --label-enable --scope=outline --tlsverify --interval "${WATCHTOWER_REFRESH_SECONDS}" 2>&1 >/dev/null)" && return
   readonly STDERR_OUTPUT
   log_error "FAILED"
   if docker_container_exists watchtower; then
@@ -444,7 +443,7 @@ Make sure to open the following ports on your firewall, router or cloud provider
 function set_hostname() {
   # These are URLs that return the client's apparent IP address.
   # We have more than one to try in case one starts failing
-  # (e.g. https://github.com/Jigsaw-Code/outline-server/issues/776).
+  # (e.g. https://github.com/OutlineFoundation/outline-server/issues/776).
   local -ar urls=(
     'https://icanhazip.com/'
     'https://ipinfo.io/ip'
@@ -460,8 +459,8 @@ function set_hostname() {
 install_shadowbox() {
   local MACHINE_TYPE
   MACHINE_TYPE="$(uname -m)"
-  if [[ "${MACHINE_TYPE}" != "x86_64" ]]; then
-    log_error "Unsupported machine type: ${MACHINE_TYPE}. Please run this script on a x86_64 machine"
+  if [[ "${MACHINE_TYPE}" != "x86_64" && "${MACHINE_TYPE}" != "aarch64" && "${MACHINE_TYPE}" != "arm64" ]]; then
+    log_error "Unsupported machine type: ${MACHINE_TYPE}. Supported architectures: x86_64, aarch64/arm64."
     exit 1
   fi
 
@@ -633,7 +632,7 @@ function main() {
 
 main "$@"
 
-# wget -qO- https://raw.githubusercontent.com/Jigsaw-Code/outline-server/master/src/server_manager/install_scripts/install_server.sh |\
+# wget -qO- https://raw.githubusercontent.com/OutlineFoundation/outline-server/master/src/server_manager/install_scripts/install_server.sh |\
 #   sudo bash -s -- --api-port 37280 --keys-port 58628
 
 
