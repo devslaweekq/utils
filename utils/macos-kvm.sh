@@ -9,6 +9,7 @@
 #   bash macos-kvm.sh                        — full setup (interactive AutoPilot)
 #   bash macos-kvm.sh --auto                 — full autopilot: answers all questions automatically based on system resources
 #   bash macos-kvm.sh --auto --os <ver>      — same but choose macOS version: 26=Tahoe 15=Sequoia 14=Sonoma 13=Ventura 12=Monterey
+#   bash macos-kvm.sh --force                — re-run AutoPilot even if boot script and image already exist
 #   bash macos-kvm.sh --update-space <size>  — resize VM disk: +32G adds 32GB to current size or 128G sets exact size (must be larger)
 #   bash macos-kvm.sh -us <size>
 
@@ -30,13 +31,15 @@ DISK="$INSTALL_DIR/mac_hdd_ng.img"
 
 # Parse flags
 AUTO_MODE=0
+FORCE_MODE=0
 MACOS_VER=15   # default Sequoia
 args=("$@")
 i=0
 while [ $i -lt ${#args[@]} ]; do
     case "${args[$i]}" in
-        --auto)  AUTO_MODE=1 ;;
-        --os)    i=$(( i+1 )); MACOS_VER="${args[$i]}" ;;
+        --auto)   AUTO_MODE=1 ;;
+        --force)  FORCE_MODE=1 ;;
+        --os)     i=$(( i+1 )); MACOS_VER="${args[$i]}" ;;
     esac
     i=$(( i+1 ))
 done
@@ -185,7 +188,14 @@ if [ "$VM_MEM_GB" -lt 4 ]; then
     HUGEPAGES=$(( VM_MEM_MB / 2 ))
 fi
 
-if [ "$AUTO_MODE" -eq 1 ]; then
+EXISTING_BOOT=$(find "$INSTALL_DIR" -maxdepth 1 \( -name "boot-macOS*.sh" -o -name "boot.sh" \) 2>/dev/null | head -1)
+EXISTING_IMG=$(find "$INSTALL_DIR" -maxdepth 1 \( -name "*.img" -o -name "BaseSystem.*" -o -name "RecoveryImage.*" \) 2>/dev/null | head -1)
+
+if [ -n "$EXISTING_BOOT" ] && [ -n "$EXISTING_IMG" ] && [ "$FORCE_MODE" -eq 0 ]; then
+    ok "Boot script already exists: $(basename "$EXISTING_BOOT")"
+    ok "Recovery image already exists: $(basename "$EXISTING_IMG")"
+    warn "Skipping AutoPilot (use --force to re-run it)"
+elif [ "$AUTO_MODE" -eq 1 ]; then
     echo -e "  ${GREEN}Mode${NC}           Full Auto (--auto)"
     echo -e "  ${GREEN}macOS version${NC}  ${MACOS_VER}"
     echo -e "  ${GREEN}RAM${NC}            ${VM_MEM_GB}G (50% of ${TOTAL_MEM_MB}MB)"
@@ -218,10 +228,11 @@ if [ "$AUTO_MODE" -eq 1 ]; then
     #  2             = stage14: skip XML generation
     #  2             = experimentalAudio: no thanks
     #  1             = stage15: start
-    printf "1\n1\n2\n%s\n2\n%s\n2\n1\n1\n1\n2\n%sG\n1\n1\n1\n2\n1\n1\n2\n2\n1\n" \
+    #  Q             = handoff menu: exit (avoids EOFError when stdin is exhausted)
+    printf "1\n1\n2\n%s\n2\n%s\n2\n1\n1\n1\n2\n%sG\n1\n1\n1\n2\n1\n1\n2\n2\n1\nQ\n" \
         "$AP_OS_CHOICE" "$VM_CPUS" "$VM_MEM_GB" \
         | python3 scripts/autopilot.py --skip-notices --disable-new-dialogs
-else
+elif [ "$AUTO_MODE" -eq 0 ]; then
     echo "  AutoPilot will ask a few questions and generate a launch script."
     echo "  Suggested values for your system (${TOTAL_MEM_MB}MB RAM, ${TOTAL_CPUS} CPUs):"
     echo ""

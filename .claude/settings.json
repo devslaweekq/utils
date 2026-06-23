@@ -1,7 +1,5 @@
 {
     "permissions": {
-        "defaultMode": "acceptEdits",
-        "deny": ["Bash(git commit *)", "Bash(git push *)"],
         "allow": [
             "Edit(*)",
             "Write(*)",
@@ -13,6 +11,9 @@
             "Bash(find *)",
             "Bash(chmod *)",
             "Bash(mkdir *)"
-        ]
-    }
+        ],
+        "defaultMode": "acceptEdits",
+        "deny": ["Bash(git commit *)", "Bash(git push *)"]
+    },
+    "viewMode": "focus"
 }
