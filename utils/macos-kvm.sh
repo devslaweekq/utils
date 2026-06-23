@@ -6,7 +6,9 @@
 # NVIDIA drivers since Mojave 2018). CPU/RAM/disk run near-native speed.
 #
 # Usage:
-#   bash macos-kvm.sh                        — full setup
+#   bash macos-kvm.sh                        — full setup (interactive AutoPilot)
+#   bash macos-kvm.sh --auto                 — full autopilot: answers all questions automatically based on system resources
+#   bash macos-kvm.sh --auto --os <ver>      — same but choose macOS version: 26=Tahoe 15=Sequoia 14=Sonoma 13=Ventura 12=Monterey
 #   bash macos-kvm.sh --update-space <size>  — resize VM disk: +32G adds 32GB to current size or 128G sets exact size (must be larger)
 #   bash macos-kvm.sh -us <size>
 
@@ -25,6 +27,31 @@ pause() { echo -e "${YELLOW}[>]${NC} $* — press Enter to continue..."; read -r
 
 INSTALL_DIR="$HOME/macos-kvm"
 DISK="$INSTALL_DIR/mac_hdd_ng.img"
+
+# Parse flags
+AUTO_MODE=0
+MACOS_VER=15   # default Sequoia
+args=("$@")
+i=0
+while [ $i -lt ${#args[@]} ]; do
+    case "${args[$i]}" in
+        --auto)  AUTO_MODE=1 ;;
+        --os)    i=$(( i+1 )); MACOS_VER="${args[$i]}" ;;
+    esac
+    i=$(( i+1 ))
+done
+
+# Map macOS version number to autopilot answer (position in the version list)
+# Stage 2 custom menu: 1=Tahoe(26) 2=Sequoia(15) 3=Sonoma(14) 4=Ventura(13) 5=Monterey(12) 6=BigSur(11) 7=Catalina 8=Mojave 9=HighSierra
+case "$MACOS_VER" in
+    26) AP_OS_CHOICE=1 ;;
+    15) AP_OS_CHOICE=2 ;;
+    14) AP_OS_CHOICE=3 ;;
+    13) AP_OS_CHOICE=4 ;;
+    12) AP_OS_CHOICE=5 ;;
+    11) AP_OS_CHOICE=6 ;;
+    *)  warn "Unknown --os value '$MACOS_VER', defaulting to Sequoia (15)"; AP_OS_CHOICE=2 ; MACOS_VER=15 ;;
+esac
 
 # -----------------------------------------------------------------------------
 # --update-space / -us <size> : resize VM disk
@@ -136,68 +163,80 @@ cd "$INSTALL_DIR"
 # -----------------------------------------------------------------------------
 info "Installing Python dependencies..."
 if [ -f requirements.txt ]; then
-    pip3 install --quiet -r requirements.txt 2>/dev/null || \
-    pip3 install --quiet --break-system-packages -r requirements.txt 2>/dev/null || true
+    pip3 install --quiet -r requirements.txt || \
+    pip3 install --quiet --break-system-packages -r requirements.txt || \
+    warn "pip install failed — autopilot.py may fail if deps are missing"
 fi
 ok "Python dependencies ready"
 
 # -----------------------------------------------------------------------------
-# 6. AutoPilot — interactive VM configuration
+# 6. AutoPilot — VM configuration
 # -----------------------------------------------------------------------------
 echo ""
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${CYAN}  AutoPilot — macOS VM setup wizard${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo "  AutoPilot will ask a few questions and generate a launch script."
-echo "  Suggested values for your system (${TOTAL_MEM_MB}MB RAM, ${TOTAL_CPUS} CPUs):"
-echo ""
-echo -e "  ${GREEN}macOS version${NC}  Sonoma (14) stable or Sequoia (15)"
-echo -e "                 Tahoe (26) — latest, may be unstable on KVM"
-echo -e "  ${GREEN}RAM${NC}            ${VM_MEM_MB} MB (50% of total)"
-echo -e "  ${GREEN}CPU cores${NC}      ${VM_CPUS} (50% of total)"
-echo -e "  ${GREEN}Disk size${NC}      64GB (qcow2 — grows on write, starts near-empty)"
-echo ""
-pause "Launch AutoPilot"
 
-python3 autopilot.py
+VM_MEM_GB=$(( VM_MEM_MB / 1024 ))
+if [ "$VM_MEM_GB" -lt 4 ]; then
+    VM_MEM_GB=4
+    VM_MEM_MB=$(( VM_MEM_GB * 1024 ))
+    HUGEPAGES=$(( VM_MEM_MB / 2 ))
+fi
 
-# -----------------------------------------------------------------------------
-# 7. Download macOS image
-# -----------------------------------------------------------------------------
-echo ""
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${CYAN}  Downloading macOS image from Apple CDN (~700MB)${NC}"
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-pause "Download image"
+if [ "$AUTO_MODE" -eq 1 ]; then
+    echo -e "  ${GREEN}Mode${NC}           Full Auto (--auto)"
+    echo -e "  ${GREEN}macOS version${NC}  ${MACOS_VER}"
+    echo -e "  ${GREEN}RAM${NC}            ${VM_MEM_GB}G (50% of ${TOTAL_MEM_MB}MB)"
+    echo -e "  ${GREEN}CPU cores${NC}      ${VM_CPUS} × 1 thread (50% of ${TOTAL_CPUS})"
+    echo -e "  ${GREEN}Disk size${NC}      80G (dynamic qcow2)"
+    echo -e "  ${GREEN}Network${NC}        vmxnet3 + auto MAC"
+    echo -e "  ${GREEN}Image${NC}          Download from Apple CDN"
+    echo ""
+    ok "Launching AutoPilot in fully automated mode..."
 
-python3 fetch-macOS.py || python3 resources/dmgFromAAS.py || {
-    warn "Built-in fetch script not found, falling back to OSX-KVM..."
-    curl -fsSL \
-      https://raw.githubusercontent.com/kholia/OSX-KVM/master/fetch-macOS-v2.py \
-      -o /tmp/fetch-macOS-v2.py
-    python3 /tmp/fetch-macOS-v2.py
-    mv BaseSystem.dmg "$INSTALL_DIR/" 2>/dev/null || true
-}
-
-info "Converting image to QEMU format..."
-dmg2img -i BaseSystem.dmg BaseSystem.img
-ok "BaseSystem.img ready"
-
-# -----------------------------------------------------------------------------
-# 8. Create VM disk
-# -----------------------------------------------------------------------------
-if [ ! -f "$DISK" ]; then
-    info "Creating 128GB VM disk..."
-    qemu-img create -f qcow2 "$DISK" 64G
-    ok "Disk created: $DISK"
+    # Answer sequence for autopilot.py (14 stages + summary):
+    #  1             = autopilot startup: Start
+    #  1             = stage1:  default filename (boot.sh)
+    #  2             = stage2:  "Select macOS version..."
+    #  $AP_OS_CHOICE = stage2 custom: chosen version
+    #  2             = stage3:  custom CPU cores
+    #  $VM_CPUS      = stage3 value
+    #  2             = stage4:  custom threads
+    #  1             = stage4 value: 1 thread per core
+    #  1             = stage5:  default CPU model (Haswell-noTSX)
+    #  1             = stage6:  default CPU feature args
+    #  2             = stage7:  custom RAM
+    #  ${VM_MEM_GB}G = stage7 value
+    #  1             = stage8:  default disk size (80G)
+    #  1             = stage9:  default disk type (HDD/qcow2)
+    #  1             = stage10: default network adapter
+    #  2             = stage11: generate MAC address automatically
+    #  1             = stage12: download recovery image from Apple
+    #  1             = stage13: default resolution (1280x720)
+    #  2             = stage14: skip XML generation
+    #  2             = experimentalAudio: no thanks
+    #  1             = stage15: start
+    printf "1\n1\n2\n%s\n2\n%s\n2\n1\n1\n1\n2\n%sG\n1\n1\n1\n2\n1\n1\n2\n2\n1\n" \
+        "$AP_OS_CHOICE" "$VM_CPUS" "$VM_MEM_GB" \
+        | python3 scripts/autopilot.py --skip-notices --disable-new-dialogs
 else
-    ok "Disk already exists: $DISK"
+    echo "  AutoPilot will ask a few questions and generate a launch script."
+    echo "  Suggested values for your system (${TOTAL_MEM_MB}MB RAM, ${TOTAL_CPUS} CPUs):"
+    echo ""
+    echo -e "  ${GREEN}macOS version${NC}  Sonoma (14) stable or Sequoia (15)"
+    echo -e "                 Tahoe (26) — latest, may be unstable on KVM"
+    echo -e "  ${GREEN}RAM${NC}            ${VM_MEM_GB}G (50% of total)"
+    echo -e "  ${GREEN}CPU cores${NC}      ${VM_CPUS} (50% of total)"
+    echo -e "  ${GREEN}Disk size${NC}      80G (qcow2 — grows on write, starts near-empty)"
+    echo ""
+    pause "Launch AutoPilot"
+    python3 scripts/autopilot.py
 fi
 
 # -----------------------------------------------------------------------------
-# 9. Apply performance tweaks to the generated boot script
+# 7. Apply performance tweaks to the generated boot script
 # -----------------------------------------------------------------------------
 info "Applying performance tweaks..."
 BOOT_SCRIPT=$(find "$INSTALL_DIR" -maxdepth 1 \( -name "boot-macOS*.sh" -o -name "OpenCore-Boot.sh" \) 2>/dev/null | head -1)
@@ -218,7 +257,7 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 10. Shell alias
+# 8. Shell alias
 # -----------------------------------------------------------------------------
 ALIAS_LINE="alias macos='cd $INSTALL_DIR && bash \$(ls boot-macOS*.sh OpenCore-Boot.sh 2>/dev/null | head -1)'"
 if ! grep -qF "alias macos=" ~/.bashrc 2>/dev/null; then

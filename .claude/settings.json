@@ -1,0 +1,18 @@
+{
+    "permissions": {
+        "defaultMode": "acceptEdits",
+        "deny": ["Bash(git commit *)", "Bash(git push *)"],
+        "allow": [
+            "Edit(*)",
+            "Write(*)",
+            "Read(*)",
+            "Bash(git *)",
+            "Bash(ls *)",
+            "Bash(cat *)",
+            "Bash(grep *)",
+            "Bash(find *)",
+            "Bash(chmod *)",
+            "Bash(mkdir *)"
+        ]
+    }
+}
