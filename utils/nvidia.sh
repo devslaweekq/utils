@@ -35,14 +35,15 @@ sudo apt-key del 7fa2af80
 sudo apt install --reinstall -y nvidia-driver-595-open nvidia-kernel-source-595-open \
   nvidia-headless-595-open nvidia-dkms-595-open nvidia-utils-595
 sudo apt install -y nvidia-settings nvidia-prime \
-  libnvidia-egl-wayland1 # nvidia-vulkan-icd nvidia-driver-libs
+  libnvidia-egl-wayland1 \
+  nvidia-container-toolkit nvidia-container-runtime # nvidia-vulkan-icd nvidia-driver-libs
 
 # Installi Vulkan and other graphic libs
 sudo apt install -y \
-  libvulkan1:{i386,amd64} mesa-vulkan-drivers:{i386,amd64} libgl1-mesa-dri:{i386,amd64} \
+  libvulkan1:{i386,amd64} mesa-vulkan-drivers:{i386,amd64} \
+  libgl1:{i386,amd64} libgl1-mesa-dri:{i386,amd64} \
   vkbasalt libglu1-mesa-dev:{i386,amd64} freeglut3-dev mesa-common-dev \
   libopenal1 libopenal-dev libalut0 libalut-dev
-  # libdisplay-info2:{i386,amd64}
 
 # sudo prime-select on-demand # nvidia|intel|on-demand|query
 # sudo nvidia-xconfig --prime
