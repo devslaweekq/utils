@@ -9,6 +9,8 @@
 #   bash macos-kvm.sh                        — full setup (interactive AutoPilot)
 #   bash macos-kvm.sh --auto                 — full autopilot: answers all questions automatically based on system resources
 #   bash macos-kvm.sh --auto --os <ver>      — same but choose macOS version: 26=Tahoe 15=Sequoia 14=Sonoma 13=Ventura 12=Monterey
+#   bash macos-kvm.sh --auto --nvme          — same but use NVMe disk (default: HDD)
+#   bash macos-kvm.sh --auto --ssd           — same but use SSD disk
 #   bash macos-kvm.sh --force                — re-run AutoPilot even if boot script and image already exist
 #   bash macos-kvm.sh --update-space <size>  — resize VM disk: +32G adds 32GB to current size or 128G sets exact size (must be larger)
 #   bash macos-kvm.sh -us <size>
@@ -32,6 +34,7 @@ DISK="$INSTALL_DIR/mac_hdd_ng.img"
 # Parse flags
 AUTO_MODE=0
 FORCE_MODE=0
+DISK_TYPE=1    # 1=HDD 2=SSD 3=NVMe
 MACOS_VER=15   # default Sequoia
 args=("$@")
 i=0
@@ -39,6 +42,8 @@ while [ $i -lt ${#args[@]} ]; do
     case "${args[$i]}" in
         --auto)   AUTO_MODE=1 ;;
         --force)  FORCE_MODE=1 ;;
+        --nvme)   DISK_TYPE=3 ;;
+        --ssd)    DISK_TYPE=2 ;;
         --os)     i=$(( i+1 )); MACOS_VER="${args[$i]}" ;;
     esac
     i=$(( i+1 ))
@@ -220,7 +225,7 @@ elif [ "$AUTO_MODE" -eq 1 ]; then
     #  2             = stage7:  custom RAM
     #  ${VM_MEM_GB}G = stage7 value
     #  1             = stage8:  default disk size (80G)
-    #  1             = stage9:  default disk type (HDD/qcow2)
+    #  $DISK_TYPE    = stage9:  disk type (1=HDD 2=SSD 3=NVMe)
     #  1             = stage10: default network adapter
     #  2             = stage11: generate MAC address automatically
     #  1             = stage12: download recovery image from Apple
@@ -228,9 +233,10 @@ elif [ "$AUTO_MODE" -eq 1 ]; then
     #  2             = stage14: skip XML generation
     #  2             = experimentalAudio: no thanks
     #  1             = stage15: start
+    #  2             = existingWarning1: HDD already exists → use existing file
     #  Q             = handoff menu: exit (avoids EOFError when stdin is exhausted)
-    printf "1\n1\n2\n%s\n2\n%s\n2\n1\n1\n1\n2\n%sG\n1\n1\n1\n2\n1\n1\n2\n2\n1\nQ\n" \
-        "$AP_OS_CHOICE" "$VM_CPUS" "$VM_MEM_GB" \
+    printf "1\n1\n2\n%s\n2\n%s\n2\n1\n1\n1\n2\n%sG\n1\n%s\n1\n2\n1\n1\n2\n2\n1\n2\nQ\n" \
+        "$AP_OS_CHOICE" "$VM_CPUS" "$VM_MEM_GB" "$DISK_TYPE" \
         | python3 scripts/autopilot.py --skip-notices --disable-new-dialogs
 elif [ "$AUTO_MODE" -eq 0 ]; then
     echo "  AutoPilot will ask a few questions and generate a launch script."
@@ -250,7 +256,7 @@ fi
 # 7. Apply performance tweaks to the generated boot script
 # -----------------------------------------------------------------------------
 info "Applying performance tweaks..."
-BOOT_SCRIPT=$(find "$INSTALL_DIR" -maxdepth 1 \( -name "boot-macOS*.sh" -o -name "OpenCore-Boot.sh" \) 2>/dev/null | head -1)
+BOOT_SCRIPT=$(find "$INSTALL_DIR" -maxdepth 1 \( -name "boot-macOS*.sh" -o -name "OpenCore-Boot.sh" -o -name "boot.sh" \) 2>/dev/null | head -1)
 
 if [ -n "$BOOT_SCRIPT" ] && [ -f "$BOOT_SCRIPT" ]; then
     if ! grep -q "mem-path" "$BOOT_SCRIPT"; then
@@ -270,7 +276,7 @@ fi
 # -----------------------------------------------------------------------------
 # 8. Shell alias
 # -----------------------------------------------------------------------------
-ALIAS_LINE="alias macos='cd $INSTALL_DIR && bash \$(ls boot-macOS*.sh OpenCore-Boot.sh 2>/dev/null | head -1)'"
+ALIAS_LINE="alias macos='cd $INSTALL_DIR && bash \$(ls boot-macOS*.sh OpenCore-Boot.sh boot.sh 2>/dev/null | head -1)'"
 if ! grep -qF "alias macos=" ~/.bashrc 2>/dev/null; then
     echo "$ALIAS_LINE" >> ~/.bashrc
     ok "Alias 'macos' added to ~/.bashrc"
