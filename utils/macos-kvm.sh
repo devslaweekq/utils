@@ -11,6 +11,7 @@
 #   bash macos-kvm.sh --auto --os <ver>      — same but choose macOS version: 26=Tahoe 15=Sequoia 14=Sonoma 13=Ventura 12=Monterey
 #   bash macos-kvm.sh --auto --nvme          — same but use NVMe disk (default: HDD)
 #   bash macos-kvm.sh --auto --ssd           — same but use SSD disk
+#   bash macos-kvm.sh --auto --res <res>     — resolution: 720p 1080p 1440p 4k 900p (default: 720p)
 #   bash macos-kvm.sh --force                — re-run AutoPilot even if boot script and image already exist
 #   bash macos-kvm.sh --update-space <size>  — resize VM disk: +32G adds 32GB to current size or 128G sets exact size (must be larger)
 #   bash macos-kvm.sh -us <size>
@@ -35,6 +36,7 @@ DISK="$INSTALL_DIR/mac_hdd_ng.img"
 AUTO_MODE=0
 FORCE_MODE=0
 DISK_TYPE=1    # 1=HDD 2=SSD 3=NVMe
+SCREEN_RES="1440p"
 MACOS_VER=15   # default Sequoia
 args=("$@")
 i=0
@@ -44,10 +46,23 @@ while [ $i -lt ${#args[@]} ]; do
         --force)  FORCE_MODE=1 ;;
         --nvme)   DISK_TYPE=3 ;;
         --ssd)    DISK_TYPE=2 ;;
+        --res)    i=$(( i+1 )); SCREEN_RES="${args[$i]}" ;;
         --os)     i=$(( i+1 )); MACOS_VER="${args[$i]}" ;;
     esac
     i=$(( i+1 ))
 done
+
+# Map resolution to autopilot stage13 answer sequence
+# stage13 main: 1=720p(default)  2=more resolutions submenu
+# stage13 sub:  1=800x600 2=1024x768 3=1280x720 4=1280x1024 5=1440x900 6=1080p 7=1440p 8=4K
+case "$SCREEN_RES" in
+    720p|1280x720)   AP_RES_SEQ="1" ;;
+    1080p|1920x1080) AP_RES_SEQ=$'2\n6' ;;
+    1440p|2560x1440) AP_RES_SEQ=$'2\n7' ;;
+    4k|4K|3840x2160) AP_RES_SEQ=$'2\n8' ;;
+    900p|1440x900)   AP_RES_SEQ=$'2\n5' ;;
+    *)  warn "Unknown --res value '$SCREEN_RES', defaulting to 720p"; AP_RES_SEQ="1" ; SCREEN_RES="720p" ;;
+esac
 
 # Map macOS version number to autopilot answer (position in the version list)
 # Stage 2 custom menu: 1=Tahoe(26) 2=Sequoia(15) 3=Sonoma(14) 4=Ventura(13) 5=Monterey(12) 6=BigSur(11) 7=Catalina 8=Mojave 9=HighSierra
@@ -88,11 +103,11 @@ fi
 # Detect system resources
 TOTAL_MEM_MB=$(( $(grep MemTotal /proc/meminfo | awk '{print $2}') / 1024 ))
 TOTAL_CPUS=$(nproc)
-VM_MEM_MB=$(( TOTAL_MEM_MB / 2 ))
+VM_MEM_MB=$(( TOTAL_MEM_MB * 0.75 ))
 VM_MEM_MB=$(( (VM_MEM_MB / 1024) * 1024 ))  # round down to nearest GB
-VM_CPUS=$(( TOTAL_CPUS / 2 ))
+VM_CPUS=$(( TOTAL_CPUS * 0.75 ))
 [ "$VM_CPUS" -lt 2 ] && VM_CPUS=2
-HUGEPAGES=$(( VM_MEM_MB / 2 ))  # each hugepage = 2MB
+HUGEPAGES=$(( VM_MEM_MB * 0.5 ))  # each hugepage = 2MB
 
 # -----------------------------------------------------------------------------
 # 1. Check KVM
@@ -190,7 +205,7 @@ VM_MEM_GB=$(( VM_MEM_MB / 1024 ))
 if [ "$VM_MEM_GB" -lt 4 ]; then
     VM_MEM_GB=4
     VM_MEM_MB=$(( VM_MEM_GB * 1024 ))
-    HUGEPAGES=$(( VM_MEM_MB / 2 ))
+    HUGEPAGES=$(( VM_MEM_MB * 0.5 ))
 fi
 
 EXISTING_BOOT=$(find "$INSTALL_DIR" -maxdepth 1 \( -name "boot-macOS*.sh" -o -name "boot.sh" \) 2>/dev/null | head -1)
@@ -207,36 +222,38 @@ elif [ "$AUTO_MODE" -eq 1 ]; then
     echo -e "  ${GREEN}CPU cores${NC}      ${VM_CPUS} × 1 thread (50% of ${TOTAL_CPUS})"
     echo -e "  ${GREEN}Disk size${NC}      80G (dynamic qcow2)"
     echo -e "  ${GREEN}Network${NC}        vmxnet3 + auto MAC"
+    echo -e "  ${GREEN}Resolution${NC}     ${SCREEN_RES}"
     echo -e "  ${GREEN}Image${NC}          Download from Apple CDN"
     echo ""
     ok "Launching AutoPilot in fully automated mode..."
 
-    # Answer sequence for autopilot.py (14 stages + summary):
-    #  1             = autopilot startup: Start
-    #  1             = stage1:  default filename (boot.sh)
-    #  2             = stage2:  "Select macOS version..."
-    #  $AP_OS_CHOICE = stage2 custom: chosen version
-    #  2             = stage3:  custom CPU cores
-    #  $VM_CPUS      = stage3 value
-    #  2             = stage4:  custom threads
-    #  1             = stage4 value: 1 thread per core
-    #  1             = stage5:  default CPU model (Haswell-noTSX)
-    #  1             = stage6:  default CPU feature args
-    #  2             = stage7:  custom RAM
-    #  ${VM_MEM_GB}G = stage7 value
-    #  1             = stage8:  default disk size (80G)
-    #  $DISK_TYPE    = stage9:  disk type (1=HDD 2=SSD 3=NVMe)
-    #  1             = stage10: default network adapter
-    #  2             = stage11: generate MAC address automatically
-    #  1             = stage12: download recovery image from Apple
-    #  1             = stage13: default resolution (1280x720)
-    #  2             = stage14: skip XML generation
-    #  2             = experimentalAudio: no thanks
-    #  1             = stage15: start
-    #  2             = existingWarning1: HDD already exists → use existing file
-    #  Q             = handoff menu: exit (avoids EOFError when stdin is exhausted)
-    printf "1\n1\n2\n%s\n2\n%s\n2\n1\n1\n1\n2\n%sG\n1\n%s\n1\n2\n1\n1\n2\n2\n1\n2\nQ\n" \
-        "$AP_OS_CHOICE" "$VM_CPUS" "$VM_MEM_GB" "$DISK_TYPE" \
+    # Answer sequence for autopilot.py
+    AP_INPUT="1              # startup: Start
+1              # stage1:  default filename (boot.sh)
+2              # stage2:  Select macOS version
+${AP_OS_CHOICE} # stage2 custom: chosen version
+2              # stage3:  custom CPU cores
+${VM_CPUS}     # stage3 value
+2              # stage4:  custom threads
+1              # stage4 value: 1 thread per core
+1              # stage5:  default CPU model (Haswell-noTSX)
+1              # stage6:  default CPU feature args
+2              # stage7:  custom RAM
+${VM_MEM_GB}G  # stage7 value
+1              # stage8:  default disk size (80G)
+${DISK_TYPE}   # stage9:  disk type (1=HDD 2=SSD 3=NVMe)
+1              # stage10: default network adapter
+2              # stage11: generate MAC address automatically
+1              # stage12: download recovery image from Apple
+${AP_RES_SEQ}  # stage13: resolution (1=720p or 2+sub for others)
+2              # stage14: skip XML generation
+2              # experimentalAudio: no thanks
+1              # stage15: start
+2              # existingWarning1: HDD already exists → use existing file
+Q              # handoff menu: exit"
+
+    # Strip inline comments, then feed to autopilot
+    sed 's/[[:space:]]*#.*//' <<< "$AP_INPUT" \
         | python3 scripts/autopilot.py --skip-notices --disable-new-dialogs
 elif [ "$AUTO_MODE" -eq 0 ]; then
     echo "  AutoPilot will ask a few questions and generate a launch script."
