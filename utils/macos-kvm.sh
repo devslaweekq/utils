@@ -36,7 +36,7 @@ DISK="$INSTALL_DIR/mac_hdd_ng.img"
 AUTO_MODE=0
 FORCE_MODE=0
 DISK_TYPE=1    # 1=HDD 2=SSD 3=NVMe
-SCREEN_RES="1440p"
+SCREEN_RES="1080p"
 MACOS_VER=15   # default Sequoia
 args=("$@")
 i=0
@@ -227,6 +227,19 @@ elif [ "$AUTO_MODE" -eq 1 ]; then
     echo ""
     ok "Launching AutoPilot in fully automated mode..."
 
+    # Extra answers for interactive prompts during handoff (file conflicts on re-run)
+    AP_HANDOFF=""
+    if [ -f "$INSTALL_DIR/boot.sh" ] || [ -f "$INSTALL_DIR/boot.xml" ]; then
+        AP_HANDOFF+="1              # existingWarning: boot script exists → rename
+"
+    fi
+    if [ -f "$INSTALL_DIR/HDD.qcow2" ]; then
+        AP_HANDOFF+="2              # existingWarning1: HDD exists → use existing file
+"
+    fi
+    AP_HANDOFF+="Q              # completion menu: exit
+"
+
     # Answer sequence for autopilot.py
     AP_INPUT="1              # startup: Start
 1              # stage1:  default filename (boot.sh)
@@ -249,8 +262,7 @@ ${AP_RES_SEQ}  # stage13: resolution (1=720p or 2+sub for others)
 2              # stage14: skip XML generation
 2              # experimentalAudio: no thanks
 1              # stage15: start
-2              # existingWarning1: HDD already exists → use existing file
-Q              # handoff menu: exit"
+${AP_HANDOFF}"
 
     # Strip inline comments, then feed to autopilot
     sed 's/[[:space:]]*#.*//' <<< "$AP_INPUT" \
