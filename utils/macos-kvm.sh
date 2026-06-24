@@ -103,11 +103,11 @@ fi
 # Detect system resources
 TOTAL_MEM_MB=$(( $(grep MemTotal /proc/meminfo | awk '{print $2}') / 1024 ))
 TOTAL_CPUS=$(nproc)
-VM_MEM_MB=$(( TOTAL_MEM_MB * 0.75 ))
+VM_MEM_MB=$(( TOTAL_MEM_MB * 3 / 4 ))
 VM_MEM_MB=$(( (VM_MEM_MB / 1024) * 1024 ))  # round down to nearest GB
-VM_CPUS=$(( TOTAL_CPUS * 0.75 ))
+VM_CPUS=$(( TOTAL_CPUS * 3 / 4 ))
 [ "$VM_CPUS" -lt 2 ] && VM_CPUS=2
-HUGEPAGES=$(( VM_MEM_MB * 0.5 ))  # each hugepage = 2MB
+HUGEPAGES=$(( VM_MEM_MB / 2 ))  # each hugepage = 2MB
 
 # -----------------------------------------------------------------------------
 # 1. Check KVM
@@ -205,7 +205,7 @@ VM_MEM_GB=$(( VM_MEM_MB / 1024 ))
 if [ "$VM_MEM_GB" -lt 4 ]; then
     VM_MEM_GB=4
     VM_MEM_MB=$(( VM_MEM_GB * 1024 ))
-    HUGEPAGES=$(( VM_MEM_MB * 0.5 ))
+    HUGEPAGES=$(( VM_MEM_MB / 2 ))
 fi
 
 EXISTING_BOOT=$(find "$INSTALL_DIR" -maxdepth 1 \( -name "boot-macOS*.sh" -o -name "boot.sh" \) 2>/dev/null | head -1)
