@@ -3,6 +3,8 @@
 # Complete solution for the automatic microphone input level change problem
 # Description: Blocks automatic lowering of microphone input level
 
+# ./utils/mic/fix-input-level.sh
+
 set -e
 
 sudo apt install pulseaudio-utils
