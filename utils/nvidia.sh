@@ -23,6 +23,12 @@ sudo apt install -y \
 sudo apt install software-properties-gtk # for kde qt, for gnome gtk
 
 sudo add-apt-repository -y ppa:graphics-drivers/ppa
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+  | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -sL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
 # sudo add-apt-repository -y ppa:oibaf/graphics-drivers
 
 sudo dpkg --add-architecture i386
@@ -36,14 +42,17 @@ sudo apt install --reinstall -y nvidia-driver-595-open nvidia-kernel-source-595-
   nvidia-headless-595-open nvidia-dkms-595-open nvidia-utils-595
 sudo apt install -y nvidia-settings nvidia-prime \
   libnvidia-egl-wayland1 \
-  nvidia-container-toolkit nvidia-container-runtime # nvidia-vulkan-icd nvidia-driver-libs
+  nvidia-container-toolkit nvidia-container-runtime
+
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
 
 # Installi Vulkan and other graphic libs
 sudo apt install -y \
   libvulkan1:{i386,amd64} mesa-vulkan-drivers:{i386,amd64} \
   libgl1:{i386,amd64} libgl1-mesa-dri:{i386,amd64} \
   vkbasalt libglu1-mesa-dev:{i386,amd64} freeglut3-dev mesa-common-dev \
-  libopenal1 libopenal-dev libalut0 libalut-dev
+  libopenal1 libopenal-dev libalut0 libalut-dev libnvidia-gl-595:{i386,amd64}
 
 # sudo prime-select on-demand # nvidia|intel|on-demand|query
 # sudo nvidia-xconfig --prime

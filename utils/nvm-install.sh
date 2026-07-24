@@ -32,8 +32,8 @@ export NVM_DIR="$HOME/.nvm"
 
 nvm ls-remote
 
-# Install and use v22.18.0 Node.js
-VERSION=v22.18.0
+# Install and use v24.15.0 Node.js
+VERSION=v24.15.0
 nvm install "$VERSION"
 nvm alias default "$VERSION"
 nvm use "$VERSION"
