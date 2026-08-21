@@ -26,13 +26,13 @@ ADGUARD_BIN="$ADGUARD_DIR/AdGuardHome"
 ADGUARD_YAML="$ADGUARD_DIR/AdGuardHome.yaml"
 CREDS_FILE=/root/.adguardhome_admin_credentials
 WEB_ADDR=127.0.0.1
-WEB_PORT=3000
+WEB_PORT=9007
 DNS_PORT=53
-ADMIN_USER="${ADGUARD_ADMIN_USER:-admin}"
+ADMIN_USER="${ADGUARD_ADMIN_USER:-slaweekq}"
 ADMIN_PASS="${ADGUARD_ADMIN_PASSWORD:-}"
 
 # Domains routed to Yandex DNS for correct in-RU CDN edge selection.
-RU_DOMAINS="ru/su/xn--p1ai/yandex.net/yandex.ru/yastatic.net/mail.ru/vk.com/vk-cdn.net/userapi.com/ok.ru/sberbank.ru/sber.ru/ozon.ru/wildberries.ru/avito.ru/rutube.ru/kinopoisk.ru/2gis.ru/mts.ru/beeline.ru/megafon.ru/tinkoff.ru/gosuslugi.ru/dzen.ru"
+RU_DOMAINS="ru/su/xn--p1ai/yandex.net/yandex.ru/yastatic.net/mail.ru/vk.com/vk.ru/vk-cdn.net/userapi.com/ok.ru/sberbank.ru/sber.ru/ozon.ru/wildberries.ru/avito.ru/rutube.ru/kinopoisk.ru/2gis.ru/mts.ru/beeline.ru/megafon.ru/tinkoff.ru/gosuslugi.ru/dzen.ru"
 
 log() { echo "[adguard-home] $*"; }
 die() {
@@ -42,7 +42,7 @@ die() {
 
 [[ $EUID -eq 0 ]] || die "run as root: sudo bash install.sh"
 command -v systemctl >/dev/null 2>&1 || die "systemd is required"
-command -v curl >/dev/null 2>&1 || die "curl is required (apt-get install -y curl)"
+command -v curl >/dev/null 2>&1 || sudo apt update && sudo apt install -y curl
 
 log "Freeing port 53 from systemd-resolved's stub listener..."
 mkdir -p /etc/systemd/resolved.conf.d
@@ -157,7 +157,7 @@ AdGuard Home is up.
   DNS server (point your router here):  ${PUBLIC_IP}:53
   Admin web UI (loopback only):         http://127.0.0.1:${WEB_PORT}
     -> access remotely via SSH tunnel:
-       ssh -L 3000:127.0.0.1:3000 <user>@${PUBLIC_IP}
+       ssh -L 9007:127.0.0.1:9007 <user>@${PUBLIC_IP}
   Admin credentials saved at:           ${CREDS_FILE}
 
 WARNING: port 53 is open to the whole internet on this host
