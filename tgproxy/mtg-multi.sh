@@ -39,7 +39,9 @@ if [[ -f /etc/os-release ]]; then
 fi
 
 port_in_use() {
-  ss -H -tln "( sport = :$1 )" 2>/dev/null | grep -q .
+  local out
+  out="$(ss -H -tln "( sport = :$1 )" 2>/dev/null || true)"
+  [[ -n "$out" ]]
 }
 
 # Try 443, then 7443, then ask the user for a port until a free one is given.
@@ -87,7 +89,8 @@ apt-get install -y -qq curl tar iproute2 >/dev/null
 ARCH="$(detect_asset_arch)"
 
 info "Looking up the latest mtg-multi release..."
-LATEST_TAG="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
+API_RESPONSE="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest")"
+LATEST_TAG="$(printf '%s' "$API_RESPONSE" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
 if [[ -z "$LATEST_TAG" ]]; then
   error "Could not determine the latest mtg-multi release."
   exit 1
