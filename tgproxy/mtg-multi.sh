@@ -144,8 +144,12 @@ api-bind-to = "${API_BIND}"
 [secrets]
 default = "${SECRET}"
 EOF
-  chmod 600 "$CONFIG_PATH"
 fi
+
+# The service runs as the unprivileged "nobody" user, so it must own the
+# config file to be able to read it (root:root 600 would lock it out).
+chown nobody:nogroup "$CONFIG_PATH"
+chmod 600 "$CONFIG_PATH"
 
 PORT="$(grep -m1 '^bind-to' "$CONFIG_PATH" | grep -oE ':[0-9]+"' | tr -d ':"')"
 
