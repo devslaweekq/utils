@@ -2,7 +2,8 @@
 # cd ~
 # curl -o mtg-multi.sh https://raw.githubusercontent.com/devslaweekq/utils/main/tgproxy/mtg-multi.sh
 # chmod +x mtg-multi.sh
-# sudo ./mtg-multi.sh [port]
+# sudo ./mtg-multi.sh [port]        # install / upgrade
+# sudo ./mtg-multi.sh -d|--delete   # fully remove
 #
 # Automatic install of mtg-multi (https://github.com/MHSanaei/mtg-multi) -
 # a multi-user Telegram MTProto proxy - as a systemd service on Ubuntu.
@@ -11,6 +12,7 @@
 #
 # Re-running the script upgrades the binary and restarts the service
 # without touching the existing secret/port (config is left as-is).
+# Pass -d/--delete to stop the service and remove everything it installed.
 
 set -euo pipefail
 
@@ -82,6 +84,66 @@ detect_asset_arch() {
   esac
 }
 
+config_port() {
+  [[ -f "$CONFIG_PATH" ]] || return 0
+  grep -m1 '^bind-to' "$CONFIG_PATH" | grep -oE ':[0-9]+"' | tr -d ':"' || true
+}
+
+uninstall() {
+  local port
+  port="$(config_port)"
+
+  echo "This will remove:"
+  echo "  - the mtg-multi systemd service"
+  [[ -f "$BIN_PATH" ]] && echo "  - the binary at ${BIN_PATH}"
+  [[ -d "$CONFIG_DIR" ]] && echo "  - the config directory ${CONFIG_DIR} (including the secret!)"
+  if [[ -n "$port" ]] && command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
+    echo "  - the ufw rule for ${port}/tcp"
+  fi
+
+  read -r -p "Are you sure? [y/N] " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    info "Aborted, nothing was removed."
+    exit 0
+  fi
+
+  info "Stopping and disabling the service..."
+  systemctl stop mtg-multi 2>/dev/null || true
+  systemctl disable mtg-multi 2>/dev/null || true
+  rm -f "$SERVICE_PATH"
+  systemctl daemon-reload
+  systemctl reset-failed mtg-multi 2>/dev/null || true
+
+  if [[ -n "$port" ]] && command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
+    info "Removing the ufw rule for ${port}/tcp..."
+    ufw --force delete allow "${port}/tcp" >/dev/null 2>&1 || true
+  fi
+
+  info "Removing the binary and config..."
+  rm -f "$BIN_PATH"
+  rm -rf "$CONFIG_DIR"
+
+  info "mtg-multi has been fully removed."
+}
+
+case "${1-}" in
+  -d|--delete)
+    uninstall
+    exit 0
+    ;;
+  -h|--help)
+    cat <<EOF
+Usage: sudo $0 [port]        install or upgrade mtg-multi
+       sudo $0 -d|--delete   stop and remove mtg-multi entirely
+
+[port] is only used on the first install (auto-picks 443, then 7443, then
+asks interactively if both are busy). Later runs upgrade the binary and
+leave the existing secret/port untouched.
+EOF
+    exit 0
+    ;;
+esac
+
 info "Installing dependencies (curl, tar, iproute2)..."
 apt-get update -y -qq
 apt-get install -y -qq curl tar iproute2 >/dev/null
@@ -151,7 +213,7 @@ fi
 chown nobody:nogroup "$CONFIG_PATH"
 chmod 600 "$CONFIG_PATH"
 
-PORT="$(grep -m1 '^bind-to' "$CONFIG_PATH" | grep -oE ':[0-9]+"' | tr -d ':"')"
+PORT="$(config_port)"
 
 info "Creating the systemd service..."
 cat > "$SERVICE_PATH" <<EOF
