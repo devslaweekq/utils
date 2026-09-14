@@ -93,10 +93,20 @@ uninstall() {
   local port
   port="$(config_port)"
 
+  local have_service=false have_bin=false have_config=false
+  [[ -f "$SERVICE_PATH" ]] && have_service=true
+  [[ -f "$BIN_PATH" ]] && have_bin=true
+  [[ -d "$CONFIG_DIR" ]] && have_config=true
+
+  if ! $have_service && ! $have_bin && ! $have_config; then
+    info "Nothing to remove - mtg-multi is not installed."
+    exit 0
+  fi
+
   echo "This will remove:"
-  echo "  - the mtg-multi systemd service"
-  [[ -f "$BIN_PATH" ]] && echo "  - the binary at ${BIN_PATH}"
-  [[ -d "$CONFIG_DIR" ]] && echo "  - the config directory ${CONFIG_DIR} (including the secret!)"
+  $have_service && echo "  - the mtg-multi systemd service"
+  $have_bin && echo "  - the binary at ${BIN_PATH}"
+  $have_config && echo "  - the config directory ${CONFIG_DIR} (including the secret!)"
   if [[ -n "$port" ]] && command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     echo "  - the ufw rule for ${port}/tcp"
   fi
@@ -107,21 +117,25 @@ uninstall() {
     exit 0
   fi
 
-  info "Stopping and disabling the service..."
-  systemctl stop mtg-multi 2>/dev/null || true
-  systemctl disable mtg-multi 2>/dev/null || true
-  rm -f "$SERVICE_PATH"
-  systemctl daemon-reload
-  systemctl reset-failed mtg-multi 2>/dev/null || true
+  if $have_service; then
+    info "Stopping and disabling the service..."
+    systemctl stop mtg-multi 2>/dev/null || true
+    systemctl disable mtg-multi 2>/dev/null || true
+    rm -f "$SERVICE_PATH"
+    systemctl daemon-reload
+    systemctl reset-failed mtg-multi 2>/dev/null || true
+  fi
 
   if [[ -n "$port" ]] && command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     info "Removing the ufw rule for ${port}/tcp..."
     ufw --force delete allow "${port}/tcp" >/dev/null 2>&1 || true
   fi
 
-  info "Removing the binary and config..."
-  rm -f "$BIN_PATH"
-  rm -rf "$CONFIG_DIR"
+  if $have_bin || $have_config; then
+    info "Removing the binary and config..."
+    rm -f "$BIN_PATH"
+    rm -rf "$CONFIG_DIR"
+  fi
 
   info "mtg-multi has been fully removed."
 }
