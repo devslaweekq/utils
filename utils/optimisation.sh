@@ -14,12 +14,21 @@ mkdir -p "$HOME/.local/bin"
 cat > "$HOME/.local/bin/prime-run" <<EOL
 #!/bin/bash
 
-export gamemoderun
+# Settings graph NVIDIA
 export __NV_PRIME_RENDER_OFFLOAD=1
 export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export __VK_LAYER_NV_optimus=NVIDIA_only
+export PROTON_ENABLE_NVAPI=1
+
+# Settings for Wayland/Display
 export GBM_BACKEND=nvidia-drm
 export WLR_NO_HARDWARE_CURSORS=1
-exec "\$@"
+
+# Optimize proc for Linux for Mortal Kombat 1
+export ProtonCpuLoadRebalancing=1
+
+# Running game with MangoHud and GameMode
+exec mangohud gamemoderun "\$@"
 EOL
 chmod +x "$HOME/.local/bin/prime-run"
 source ~/.bashrc
