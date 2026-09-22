@@ -1,9 +1,9 @@
 #!/bin/bash
 
 cd ~
-wget https://github.com/Castro-Fidel/PortProton_dpkg/releases/download/portproton_1.7-2_amd64/portproton_1.7-2_amd64.deb
-sudo apt install -y ./portproton_1.7-2_amd64.deb
-rm portproton_1.7-2_amd64.deb
+wget https://github.com/Castro-Fidel/PortProton_dpkg/releases/download/portproton_1.7-3_amd64/portproton_1.7-3_amd64.deb
+sudo apt install -y ./portproton_1.7-3_amd64.deb
+rm portproton_1.7-3_amd64.deb
 
 sudo dpkg --add-architecture amd64
 sudo dpkg --add-architecture i386
@@ -18,15 +18,9 @@ sudo apt install -y \
   mingw-w64 mingw-w64-common mingw-w64-i686-dev mingw-w64-tools mingw-w64-x86-64-dev
 
 sudo apt install --fix-broken -y
-sudo apt install -y lutris
+sudo apt install -y lutris mangohud
 
-git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git && \
-  cd MangoHud && \
-  ./build.sh build && \
-  ./build.sh package && \
-  ./build.sh install && \
-cd ~ && rm -rf MangoHud
-
+mkdir -p ~/.config/MangoHud
 tee -a ~/.config/MangoHud/MangoHud.conf <<< \
 '
 background_alpha=0.3
@@ -58,3 +52,10 @@ frametime_color=00ff00
 #media_player
 #toggle_logging=F10
 '
+
+# git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git && \
+#   cd MangoHud && \
+#   ./build.sh build && \
+#   ./build.sh package && \
+#   ./build.sh install && \
+# cd ~ && rm -rf MangoHud
