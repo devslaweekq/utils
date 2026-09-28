@@ -33,7 +33,7 @@ export NVM_DIR="$HOME/.nvm"
 nvm ls-remote
 
 # Install and use v24.15.0 Node.js
-VERSION=v24.15.0
+VERSION=v24.18.0
 nvm install "$VERSION"
 nvm alias default "$VERSION"
 nvm use "$VERSION"
@@ -41,7 +41,7 @@ echo "Installing useful global npm packages..."
 npm i -g npm
 npm i -g typescript ts-node nodemon pm2 serve
 npm i -g yarn corepack prettier eslint
-npm i -g npm-check-updates dotenv nx nestjs-cli nats
+npm i -g npm-check-updates dotenv nx # nestjs-cli nats
 # npm i -g solc solhint solidity-code-metrics tronbox
 corepack enable
 

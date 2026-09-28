@@ -34,7 +34,7 @@ ollama run gemma4:E2B "Hello, what can you do?"
 
 # https://lmstudio.ai/download
 
-sudo wget https://installers.lmstudio.ai/linux/x64/0.4.13-1/LM-Studio-0.4.13-1-x64.deb -O /tmp/LM_Studio.deb
+sudo wget https://installers.lmstudio.ai/linux/x64/0.4.25-1/LM-Studio-0.4.25-1-x64.deb -O /tmp/LM_Studio.deb
 sudo apt install -y /tmp/LM_Studio.deb
 sudo rm -rf /tmp/LM_Studio.deb
 # curl -fsSL https://lmstudio.ai/install.sh | bash

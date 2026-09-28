@@ -28,7 +28,7 @@ sudo apt install -y meson gcc-mingw-w64-i686 g++-mingw-w64-i686 \
   g++-mingw-w64-x86-64-posix g++-mingw-w64-x86-64-win32 glslang-tools
 
 # wget -O $HOME/steam.deb http://media.steampowered.com/client/installer/steam.deb
-wget https://repo.steampowered.com/steam/archive/precise/steam_latest.deb
+wget https://repo.steampowered.com/steam/archive/precise/steam_latest.deb -O $HOME/steam_latest.deb
 sudo apt install -y $HOME/steam_latest.deb
 sudo rm -rf $HOME/steam_latest.deb
 

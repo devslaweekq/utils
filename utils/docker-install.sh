@@ -27,7 +27,7 @@ else
 
     echo "Installing dependencies..."
     sudo apt update && sudo apt install -y apt-transport-https \
-        ca-certificates curl gnupg lsb-release uidmap pass gnupg2
+        ca-certificates curl lsb-release uidmap pass gnupg2 # gnupg
 
     curl -sSL https://get.docker.com | sh &&\
       sudo usermod -aG docker $(whoami) &&\

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 cd ~
-wget https://github.com/Castro-Fidel/PortProton_dpkg/releases/download/portproton_1.7-3_amd64/portproton_1.7-3_amd64.deb
-sudo apt install -y ./portproton_1.7-3_amd64.deb
-rm portproton_1.7-3_amd64.deb
+wget https://github.com/Castro-Fidel/PortProton_dpkg/releases/download/portproton_amd64/portproton_amd64.deb
+sudo apt install -y ./portproton_amd64.deb
+rm portproton_amd64.deb
 
 sudo dpkg --add-architecture amd64
 sudo dpkg --add-architecture i386

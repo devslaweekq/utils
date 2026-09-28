@@ -40,8 +40,7 @@ sudo apt-key del 7fa2af80
 # install drivers NVIDIA
 sudo apt install --reinstall -y nvidia-driver-595-open nvidia-kernel-source-595-open \
   nvidia-headless-595-open nvidia-dkms-595-open nvidia-utils-595
-sudo apt install -y nvidia-settings nvidia-prime \
-  libnvidia-egl-wayland1 \
+sudo apt install -y nvidia-settings nvidia-prime libnvidia-egl-wayland1 \
   nvidia-container-toolkit nvidia-container-runtime
 
 sudo nvidia-ctk runtime configure --runtime=docker

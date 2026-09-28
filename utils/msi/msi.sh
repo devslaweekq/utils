@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# ./utils/msi/msi.sh
 set -e
 
 echo "🔹 Installing MSI EC (Battery Charge Control)..."

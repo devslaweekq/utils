@@ -47,7 +47,7 @@ sudo apt install -y tlp tlp-rdw tp-smapi-dkms acpi-call-dkms
 sudo apt install -y gamemode indicator-cpufreq
 
 echo "🔹 Configuring TLP..."
-sudo cp "$(dirname "$(readlink -f "$0")")/tlp.conf" /etc/tlp.conf
+sudo cp "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tlp.conf" /etc/tlp.conf
 
 sudo systemctl enable --now tlp.service
 sudo tlp start
@@ -64,9 +64,11 @@ if ! command_exists gamemoded; then
         rm -rf "$GAMEMODE_PATH"
     fi
 
+    sudo apt install -y \
+      git build-essential meson ninja-build systemd-dev libdbus-1-dev
     git clone https://github.com/FeralInteractive/gamemode.git "$GAMEMODE_PATH"
     cd "$GAMEMODE_PATH"
-    git checkout 1.8.1
+    git checkout 1.8.2
     ./bootstrap.sh
     cd "$HOME"
 else

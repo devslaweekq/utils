@@ -1,5 +1,5 @@
 sudo apt install -y ideviceinstaller libimobiledevice-utils ifuse \
-  usbmuxd libimobiledevice-utils idevicerestore
+  usbmuxd idevicerestore
   # python-imobiledevice libimobiledevice6 libplist2 python-plist
 
 cd ~
@@ -18,4 +18,3 @@ sudo udevadm trigger
 
 # cd ~
 # umount ~/iPhone
-sudo apt install usbmuxd  libimobiledevice-utils idevicerestore

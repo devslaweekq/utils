@@ -24,7 +24,7 @@ sudo apt install -y \
   libvpl2 va-driver-all vainfo mesa-utils intel-gpu-tools \
   intel-media-va-driver-non-free # libmfxgen1
 sudo apt install -y libze-intel-gpu1 intel-metrics-discovery intel-gsc
-sudo apt install -y libvpl-tools libva-glx2 # libmfx-gen1 libmfx1 level-zero
+sudo apt install -y libvpl-tools libva-glx2 libmfx-gen1 # libmfx1 level-zero
 sudo apt install -y libze-intel-gpu-raytracing
 sudo apt install -y libigdgmm12
 sudo apt install -y libze1 util-linux-extra intel-opencl-icd clinfo
