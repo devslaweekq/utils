@@ -1,3 +1,4 @@
 .env
 .fuse*
 .claude/worktrees
+syslog_live.txt
