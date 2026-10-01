@@ -217,11 +217,11 @@ start_load() {
   [ -n "$cpus" ] && pin=(taskset -c "$cpus")
 
   if command -v stress-ng >/dev/null; then
-    LOAD_TOOL="${pin[*]:-} stress-ng --cpu $n --cpu-method matrixprod"
+    LOAD_TOOL="${pin[*]:+${pin[*]} }stress-ng --cpu $n --cpu-method matrixprod"
     "${pin[@]}" stress-ng --cpu "$n" --cpu-method matrixprod --timeout "${secs}s" >/dev/null 2>&1 &
     LOAD_PIDS+=($!)
   else
-    LOAD_TOOL="${pin[*]:-} sha256sum /dev/zero x$n (stress-ng не найден: sudo apt install stress-ng)"
+    LOAD_TOOL="${pin[*]:+${pin[*]} }sha256sum /dev/zero x$n (stress-ng не найден: sudo apt install stress-ng)"
     for i in $(seq "$n"); do
       "${pin[@]}" timeout "$secs" sha256sum /dev/zero >/dev/null 2>&1 &
       LOAD_PIDS+=($!)
@@ -469,6 +469,7 @@ phase() {
     return 0
   fi
   [ "${7:-0}" = 1 ] && wait_cold
+  printf -v "START_T_$1" "%s" "$(temp_c)"   # Package right before the phase starts
   run_phase "$1" "$2" "$3" "$4" "$5" "$6"
 }
 
@@ -480,7 +481,7 @@ spec_compare() {
   kv "Intel: Base / Max Turbo / Min Assured" "45 Вт / 115 Вт / 35 Вт"
   kv "Intel: макс. турбо P-ядер / E-ядер" "4700 МГц / 3500 МГц (TJunction 100 °C)"
   kv "RAPL на этой системе" "$(for c in /sys/class/powercap/intel-rapl:0/constraint_*_name; do [ -r "$c" ] && printf '%s=%s Вт ' "$(cat "$c")" "$(rd "${c%_name}_power_limit_uw" | awk '{ printf "%.0f", $1 / 1e6 }')"; done)"
-  kv "Burst (старт Package ${BURST_tfirst1:-н/д} °C)" "пик ${BURST_pmax:-н/д} Вт на ${BURST_tpmax:-н/д} с; сред первые 5 с ${BURST_w5:-н/д} Вт; последние 10 с ${BURST_wl:-н/д} Вт"
+  kv "Burst (старт ${START_T_burst:-н/д} °C, первый замер ${BURST_tfirst1:-н/д} °C)" "пик ${BURST_pmax:-н/д} Вт на ${BURST_tpmax:-н/д} с; сред первые 5 с ${BURST_w5:-н/д} Вт; последние 10 с ${BURST_wl:-н/д} Вт"
   kv "4 P-ядра (CPU ${FOUR_CPUS})" "P Bzy сред ${FOUR_pfavg:-н/д} МГц (мин ${FOUR_pfmin:-н/д} / макс ${FOUR_pfmax:-н/д}); T сред ${FOUR_tavg:-н/д} / макс ${FOUR_tmax:-н/д} °C; ${FOUR_wavg:-н/д} Вт сред"
   kv "Полная нагрузка (${LOAD_SECS} с)" "${LOAD_wavg:-н/д} Вт сред; P ${LOAD_pfavg:-н/д} МГц, E ${LOAD_efavg:-н/д} МГц; T сред ${LOAD_tavg:-н/д} / макс ${LOAD_tmax:-н/д} °C"
 }
