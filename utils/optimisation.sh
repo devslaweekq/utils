@@ -84,6 +84,26 @@ sudo apt install -y powertop
 sudo powertop --auto-tune
 sudo systemctl enable fstrim.timer
 
+# Write all sysctl tuning into a single file
+sudo tee /etc/sysctl.d/99-tuning.conf >/dev/null <<'EOF'
+vm.swappiness = 10
+vm.vfs_cache_pressure = 50
+fs.inotify.max_user_watches = 524288
+EOF
+
+# Apply
+sudo sysctl --system
+
+# Verify
+sysctl vm.swappiness vm.vfs_cache_pressure fs.inotify.max_user_watches
+
+sudo systemctl disable --now ModemManager
+sudo systemctl disable NetworkManager-wait-online.service
+for f in orca-autostart geoclue-demo-agent org.gnome.DejaDup.Monitor spice-vdagent ubuntu-advantage-notification; do
+  cp /etc/xdg/autostart/$f.desktop ~/.config/autostart/ 2>/dev/null
+  echo "Hidden=true" >> ~/.config/autostart/$f.desktop
+done
+
 echo "🔹 System optimization completed successfully!"
 echo "🔹 It is recommended to reboot your system to apply all changes."
 read -r -p "Would you like to reboot now? (y/n): " RESTART
