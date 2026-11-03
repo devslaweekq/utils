@@ -11,13 +11,34 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+# User who started the script (root when run without sudo)
+TARGET_USER="${SUDO_USER:-root}"
+
+# Add an iptables rule only if it is not there yet (safe to re-run)
+ipt() {
+    local table_args=()
+    if [[ "$1" == "-t" ]]; then
+        table_args=("$1" "$2")
+        shift 2
+    fi
+    local chain="$1"
+    shift
+    if ! iptables "${table_args[@]}" -C "$chain" "$@" 2>/dev/null; then
+        iptables "${table_args[@]}" -A "$chain" "$@"
+    fi
+}
+
+unit_exists() {
+    systemctl list-unit-files "$1.service" --no-legend 2>/dev/null | grep -q "^$1.service"
+}
+
 echo "Starting Tailscale installation..."
 
 
 # Update packages and install dependencies
 echo "Updating packages..."
-sudo apt update -qq
-sudo apt install -y curl wget gnupg lsb-release apt-transport-https ca-certificates
+apt update -qq
+apt install -y curl wget gnupg lsb-release apt-transport-https ca-certificates iptables-persistent
 
 # Install Tailscale
 echo "Installing Tailscale..."
@@ -26,8 +47,8 @@ curl -fsSL https://tailscale.com/install.sh | sh
 # Start service
 echo "Starting tailscaled service..."
 # Configure systemd service
-sudo systemctl enable tailscaled
-sudo systemctl start tailscaled
+systemctl enable tailscaled
+systemctl start tailscaled
 
 # Check status
 if systemctl is-active --quiet tailscaled; then
@@ -40,58 +61,74 @@ fi
 # Configure firewall
 echo "Configuring firewall..."
 if command -v ufw &> /dev/null; then
-    sudo ufw allow 41641/udp >/dev/null 2>&1 || true
+    ufw allow 41641/udp >/dev/null 2>&1 || true
 fi
 
 # firewalld (RHEL/CentOS/Fedora)
 if command -v firewall-cmd &> /dev/null && systemctl is-active --quiet firewalld; then
-    sudo firewall-cmd --permanent --add-port=41641/udp >/dev/null 2>&1 || true
-    sudo firewall-cmd --reload >/dev/null 2>&1 || true
+    firewall-cmd --permanent --add-port=41641/udp >/dev/null 2>&1 || true
+    firewall-cmd --reload >/dev/null 2>&1 || true
 fi
 
 # iptables (fallback option)
 if command -v iptables &> /dev/null; then
-    sudo iptables -I INPUT -p udp --dport 41641 -j ACCEPT
-    # Save rules (implementation may depend on distribution)
-    if command -v iptables-save &> /dev/null; then
-        sudo iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
+    if ! iptables -C INPUT -p udp --dport 41641 -j ACCEPT 2>/dev/null; then
+        iptables -I INPUT -p udp --dport 41641 -j ACCEPT
     fi
     echo "iptables rule added for port 41641/udp"
 fi
 
-# Enable IP forwarding
+# Enable IP forwarding (drop-in file, no duplicates on re-run)
 echo "Enabling IP forwarding..."
-echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
-echo 'net.ipv6.conf.all.forwarding = 1' >> /etc/sysctl.conf
-sysctl -p
+cat > /etc/sysctl.d/99-tailscale.conf <<EOF
+net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+EOF
+sysctl -p /etc/sysctl.d/99-tailscale.conf
 
 # Configure iptables for NAT
 echo "Configuring NAT..."
 
 # Detect primary interface
-PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
+PRIMARY_INTERFACE=$(ip route show default | awk '{print $5}' | head -n1)
+if [[ -z "$PRIMARY_INTERFACE" ]]; then
+    echo "Error: could not detect primary network interface"
+    exit 1
+fi
 echo "Primary interface: $PRIMARY_INTERFACE"
 
 # Add NAT rules
-iptables -t nat -A POSTROUTING -o $PRIMARY_INTERFACE -j MASQUERADE
-iptables -A FORWARD -i tailscale0 -o $PRIMARY_INTERFACE -j ACCEPT
-iptables -A FORWARD -i $PRIMARY_INTERFACE -o tailscale0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+ipt -t nat POSTROUTING -o "$PRIMARY_INTERFACE" -j MASQUERADE
+ipt FORWARD -i tailscale0 -o "$PRIMARY_INTERFACE" -j ACCEPT
+ipt FORWARD -i "$PRIMARY_INTERFACE" -o tailscale0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 
-# Save iptables rules
+# Save iptables rules (once, after all rules are added)
 if command -v netfilter-persistent &> /dev/null; then
     netfilter-persistent save
-elif command -v iptables-save &> /dev/null; then
-    iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
+else
+    mkdir -p /etc/iptables
+    iptables-save > /etc/iptables/rules.v4
 fi
 
 echo "iptables rules configured"
 
-tailscale configure systray --enable-startup=systemd
-tailscale set --operator=$USER
-systemctl --user daemon-reload
-sudo systemctl restart systemd-resolved
-sudo systemctl restart NetworkManager
-sudo systemctl restart tailscaled
+# User-level setup (systray, operator) must run as the invoking user, not root
+if [[ "$TARGET_USER" != "root" ]]; then
+    USER_UID=$(id -u "$TARGET_USER")
+    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" \
+        tailscale configure systray --enable-startup=systemd || true
+    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" \
+        systemctl --user daemon-reload || true
+    tailscale set --operator="$TARGET_USER"
+fi
+
+# Restart only the services that exist on this machine
+for svc in systemd-resolved NetworkManager; do
+    if unit_exists "$svc"; then
+        systemctl restart "$svc"
+    fi
+done
+systemctl restart tailscaled
 
 echo ""
 echo "Tailscale installation completed!"
