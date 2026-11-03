@@ -38,7 +38,15 @@ echo "Starting Tailscale installation..."
 # Update packages and install dependencies
 echo "Updating packages..."
 apt update -qq
-apt install -y curl wget gnupg lsb-release apt-transport-https ca-certificates iptables-persistent
+apt install -y curl wget gnupg lsb-release apt-transport-https ca-certificates
+
+# ufw and iptables-persistent conflict with each other: keep ufw if it is installed
+USE_UFW=false
+if command -v ufw &> /dev/null; then
+    USE_UFW=true
+else
+    DEBIAN_FRONTEND=noninteractive apt install -y iptables-persistent
+fi
 
 # Install Tailscale
 echo "Installing Tailscale..."
@@ -60,22 +68,20 @@ fi
 
 # Configure firewall
 echo "Configuring firewall..."
-if command -v ufw &> /dev/null; then
+if $USE_UFW; then
     ufw allow 41641/udp >/dev/null 2>&1 || true
+    echo "ufw rule added for port 41641/udp"
+elif command -v iptables &> /dev/null; then
+    if ! iptables -C INPUT -p udp --dport 41641 -j ACCEPT 2>/dev/null; then
+        iptables -I INPUT -p udp --dport 41641 -j ACCEPT
+    fi
+    echo "iptables rule added for port 41641/udp"
 fi
 
 # firewalld (RHEL/CentOS/Fedora)
 if command -v firewall-cmd &> /dev/null && systemctl is-active --quiet firewalld; then
     firewall-cmd --permanent --add-port=41641/udp >/dev/null 2>&1 || true
     firewall-cmd --reload >/dev/null 2>&1 || true
-fi
-
-# iptables (fallback option)
-if command -v iptables &> /dev/null; then
-    if ! iptables -C INPUT -p udp --dport 41641 -j ACCEPT 2>/dev/null; then
-        iptables -I INPUT -p udp --dport 41641 -j ACCEPT
-    fi
-    echo "iptables rule added for port 41641/udp"
 fi
 
 # Enable IP forwarding (drop-in file, no duplicates on re-run)
@@ -97,20 +103,56 @@ if [[ -z "$PRIMARY_INTERFACE" ]]; then
 fi
 echo "Primary interface: $PRIMARY_INTERFACE"
 
-# Add NAT rules
-ipt -t nat POSTROUTING -o "$PRIMARY_INTERFACE" -j MASQUERADE
-ipt FORWARD -i tailscale0 -o "$PRIMARY_INTERFACE" -j ACCEPT
-ipt FORWARD -i "$PRIMARY_INTERFACE" -o tailscale0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+apply_runtime_nat() {
+    ipt -t nat POSTROUTING -o "$PRIMARY_INTERFACE" -j MASQUERADE
+    ipt FORWARD -i tailscale0 -o "$PRIMARY_INTERFACE" -j ACCEPT
+    ipt FORWARD -i "$PRIMARY_INTERFACE" -o tailscale0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+}
 
-# Save iptables rules (once, after all rules are added)
-if command -v netfilter-persistent &> /dev/null; then
-    netfilter-persistent save
+if $USE_UFW; then
+    # Forwarding through ufw (return traffic is allowed by ufw's conntrack rules)
+    ufw route allow in on tailscale0 out on "$PRIMARY_INTERFACE" >/dev/null 2>&1 || true
+
+    # MASQUERADE must live in ufw's before.rules (nat table, placed before *filter)
+    BEFORE_RULES=/etc/ufw/before.rules
+    [[ -f "$BEFORE_RULES.pre-tailscale" ]] || cp "$BEFORE_RULES" "$BEFORE_RULES.pre-tailscale"
+    sed -i '/# BEGIN tailscale-nat/,/# END tailscale-nat/d' "$BEFORE_RULES"
+    NAT_BLOCK=$(mktemp)
+    cat > "$NAT_BLOCK" <<NAT
+# BEGIN tailscale-nat
+*nat
+:POSTROUTING ACCEPT [0:0]
+-A POSTROUTING -o $PRIMARY_INTERFACE -j MASQUERADE
+COMMIT
+# END tailscale-nat
+
+NAT
+    awk -v blk="$NAT_BLOCK" '/^\*filter/ && !done { while ((getline l < blk) > 0) print l; done=1 } { print }' \
+        "$BEFORE_RULES" > "$BEFORE_RULES.new"
+    mv "$BEFORE_RULES.new" "$BEFORE_RULES"
+    rm -f "$NAT_BLOCK"
+
+    if ufw status | grep -q "^Status: active"; then
+        ufw reload
+    else
+        # ufw is installed but disabled: apply NAT now so it works until ufw is enabled
+        apply_runtime_nat
+        echo "Warning: ufw is not active, NAT rules are applied but not persistent."
+        echo "         Enable ufw (ufw enable) to make them permanent."
+    fi
 else
-    mkdir -p /etc/iptables
-    iptables-save > /etc/iptables/rules.v4
+    apply_runtime_nat
+
+    # Save iptables rules (once, after all rules are added)
+    if command -v netfilter-persistent &> /dev/null; then
+        netfilter-persistent save
+    else
+        mkdir -p /etc/iptables
+        iptables-save > /etc/iptables/rules.v4
+    fi
 fi
 
-echo "iptables rules configured"
+echo "Firewall rules configured"
 
 # User-level setup (systray, operator) must run as the invoking user, not root
 if [[ "$TARGET_USER" != "root" ]]; then
