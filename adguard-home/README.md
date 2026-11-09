@@ -1,6 +1,6 @@
 # AdGuard Home — split-DNS resolver (EU VPS)
 
-Own DNS resolver for the `slaweekq.ru` VPS, meant to replace Google/Cloudflare DNS on the home router. Solves three problems at once:
+Own DNS resolver for the VPS, meant to replace Google/Cloudflare DNS on the home router. Solves three problems at once:
 
 - **RU ISP DNS injection** (StackOverflow/Google-type sites getting broken answers from the provider's own resolver) — bypassed, since this
   server does its own resolution and isn't subject to the RKN registry.
