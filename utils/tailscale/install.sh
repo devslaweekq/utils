@@ -11,9 +11,6 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# User who started the script (root when run without sudo)
-TARGET_USER="${SUDO_USER:-root}"
-
 # Add an iptables rule only if it is not there yet (safe to re-run)
 ipt() {
     local table_args=()
@@ -26,10 +23,6 @@ ipt() {
     if ! iptables "${table_args[@]}" -C "$chain" "$@" 2>/dev/null; then
         iptables "${table_args[@]}" -A "$chain" "$@"
     fi
-}
-
-unit_exists() {
-    systemctl list-unit-files "$1.service" --no-legend 2>/dev/null | grep -q "^$1.service"
 }
 
 echo "Starting Tailscale installation..."
@@ -154,6 +147,10 @@ fi
 
 echo "Firewall rules configured"
 
+
+# User who started the script (root when run without sudo)
+TARGET_USER="${SUDO_USER:-root}"
+
 # User-level setup (systray, operator) must run as the invoking user, not root
 if [[ "$TARGET_USER" != "root" ]]; then
     USER_UID=$(id -u "$TARGET_USER")
@@ -163,6 +160,11 @@ if [[ "$TARGET_USER" != "root" ]]; then
         systemctl --user daemon-reload || true
     tailscale set --operator="$TARGET_USER"
 fi
+
+
+unit_exists() {
+    systemctl list-unit-files "$1.service" --no-legend 2>/dev/null | grep -q "^$1.service"
+}
 
 # Restart only the services that exist on this machine
 for svc in systemd-resolved NetworkManager; do
